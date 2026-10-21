@@ -49,9 +49,12 @@ export const DEFAULTS = Object.freeze({
   volume: 0.8,
 
   meter: '4/4',
+  // Modo libre (como en la fase 3): sin click, sin pulso en pantalla, sin cuenta previa y el acorde
+  // cambia al instante. Con metrónomo: se aplican los ajustes de abajo.
+  timeMode: 'free', // 'free' | 'metronome'
   changeMode: 'instant', // 'instant' | 'beat' | 'bar'
   restartOnChange: false,
-  metronome: false,
+  click: true,
   metronomeVolume: 0.6,
   countIn: false,
 });
@@ -108,9 +111,25 @@ export function sanitize(saved) {
     meter: pick(s.meter, (v) => Object.hasOwn(METERS, v), DEFAULTS.meter),
     changeMode: pick(s.changeMode, (v) => CHANGE_MODES.includes(v), DEFAULTS.changeMode),
     restartOnChange: pick(s.restartOnChange, isBool, DEFAULTS.restartOnChange),
-    metronome: pick(s.metronome, isBool, DEFAULTS.metronome),
+    timeMode: pick(s.timeMode, (v) => ['free', 'metronome'].includes(v), DEFAULTS.timeMode),
+    click: pick(s.click, isBool, DEFAULTS.click),
     metronomeVolume: pick(s.metronomeVolume, isUnit, DEFAULTS.metronomeVolume),
     countIn: pick(s.countIn, isBool, DEFAULTS.countIn),
+  };
+}
+
+// Ajustes de tiempo que recibe el motor de sonido: en modo libre no hay click ni cuenta previa y el
+// acorde cambia al instante, aunque estén configurados para el modo metrónomo.
+export function engineTiming(settings) {
+  const free = settings.timeMode === 'free';
+  return {
+    meter: settings.meter,
+    bpm: settings.bpm,
+    restartOnChange: settings.restartOnChange,
+    metronomeVolume: settings.metronomeVolume,
+    changeMode: free ? 'instant' : settings.changeMode,
+    metronome: !free && settings.click,
+    countIn: !free && settings.countIn,
   };
 }
 

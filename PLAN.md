@@ -88,8 +88,11 @@ El modo se elige en la configuración. En cada modo, el valor que no controla la
   - El margen con el que se preparan las notas baja de 0,1 s a 0,05 s, para que haya menos cambios «tarde».
   - El puño (silencio) actúa siempre al momento.
 - **Al cambiar de acorde dentro de un patrón:** se elige entre seguir a tempo con el acorde nuevo o reiniciar el patrón.
+- **Modo libre o con metrónomo** (botón 🥁 de la cabecera, también en la configuración). Tras probar la fase 4, el usuario pidió poder volver al funcionamiento de la fase 3:
+  - **Modo libre** (por defecto): sin click, sin pulso en pantalla, sin cuenta previa y el acorde cambia siempre al instante. El tempo sigue marcando los ritmos.
+  - **Con metrónomo:** pulso en pantalla y los ajustes de cuándo entra el acorde, click y cuenta previa.
 - **Metrónomo:**
-  - Encender y apagar el click (también desde la pantalla principal), con volumen propio. El fader de volumen no le afecta.
+  - Click audible activable, con volumen propio. El fader de volumen no le afecta.
   - Acento en la primera parte del compás. Un click por pulso.
   - **Cuenta previa opcional:** al empezar a tocar desde el silencio, suena un compás de clicks (aunque el metrónomo esté apagado) y el acorde entra en el compás siguiente.
 
@@ -183,7 +186,7 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 - Rejilla del reloj: semicorcheas en 2/4, 3/4 y 4/4; corcheas en 3/8, 6/8, 9/8 y 12/8. La lógica de cuándo entra un cambio está en `docs/js/music/timing.js`, con pruebas propias.
 - Además de los cambios de acorde, elegir un patrón un poco tarde (hasta una semicorchea después de un paso) hace sonar al momento las notas de ese paso.
 - En pantalla: puntos del pulso sobre la cámara, número grande durante la cuenta previa y el acorde en espera atenuado con «…».
-- Botón 🥁 Metrónomo en la cabecera para encenderlo o apagarlo sin entrar en la configuración.
+- Botón de la cabecera para pasar del modo libre al modo con metrónomo y volver (en el móvil solo se ve el icono).
 
 **Notas de la fase 3**
 - Ritmos: un reloj de semicorcheas marca los pasos. Al cambiar de acorde o de patrón, el ritmo sigue cuadrado con el compás (comportamiento «seguir a tempo»; la opción de reiniciar llega en la fase 4).

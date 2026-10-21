@@ -10,7 +10,7 @@ import { VolumeFader, palmY } from './hands/fader.js';
 import { HandTracker } from './hands/tracker.js';
 import { AudioEngine } from './audio/engine.js';
 import { drawStage } from './ui/stage.js';
-import { loadSettings, saveSettings, currentPattern, currentPatMap } from './settings.js';
+import { loadSettings, saveSettings, currentPattern, currentPatMap, engineTiming } from './settings.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
 import { CalibrationPanel } from './ui/calibration-panel.js';
 
@@ -48,15 +48,7 @@ function soundChord() {
 
 // Lleva al motor de sonido el patrón, el tempo y el volumen de los ajustes.
 function syncEngine() {
-  engine.configure({
-    meter: settings.meter,
-    bpm: settings.bpm,
-    changeMode: settings.changeMode,
-    restartOnChange: settings.restartOnChange,
-    metronome: settings.metronome,
-    metronomeVolume: settings.metronomeVolume,
-    countIn: settings.countIn,
-  });
+  engine.configure(engineTiming(settings));
   engine.setPattern(currentPattern(settings));
   engine.setVolume(settings.volume);
 }
@@ -202,7 +194,12 @@ function renderRight() {
     </button></li>`;
   }).join('');
   $('#soundInfo').textContent = `${settings.meter} · ${settings.bpm} ${t('bpmUnit')} · ${t(`inversion_${settings.inversion}`)} · ${t(`pattern_${pattern}`)}`;
-  $('#metronomeBtn').setAttribute('aria-pressed', settings.metronome);
+  const withMetronome = settings.timeMode === 'metronome';
+  $('#metronomeBtn').setAttribute('aria-pressed', withMetronome);
+  $('#metronomeBtn').innerHTML = `<span aria-hidden="true">${withMetronome ? '🥁' : '🎶'}</span> `
+    + `<span class="btn-label">${t(withMetronome ? 'metronome' : 'freeMode')}</span>`;
+  $('#metronomeBtn').title = t(withMetronome ? 'toFreeMode' : 'toMetronomeMode');
+  document.body.classList.toggle('free-mode', !withMetronome);
   renderVolume();
 }
 
@@ -282,7 +279,7 @@ initSettingsPanel({
 
 $('#startBtn').addEventListener('click', start);
 $('#metronomeBtn').addEventListener('click', async () => {
-  settings.metronome = !settings.metronome;
+  settings.timeMode = settings.timeMode === 'free' ? 'metronome' : 'free';
   await engine.start();
   onSettingsChange();
 });

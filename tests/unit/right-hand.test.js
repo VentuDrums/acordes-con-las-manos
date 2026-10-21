@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { VolumeFader, palmY, FADER_TRAVEL } from '../../docs/js/hands/fader.js';
 import { rightAction } from '../../docs/js/music/right-hand.js';
-import { sanitize } from '../../docs/js/settings.js';
+import { sanitize, engineTiming } from '../../docs/js/settings.js';
 import { patternsFor } from '../../docs/js/music/patterns.js';
 
 test('fader: cerrar el puño agarra sin cambiar el volumen', () => {
@@ -74,8 +74,23 @@ test('ajustes de la fase 3 (una sola tabla de patrones) pasan al 4/4 sin perders
   assert.equal(s.patMaps['4/4'].one, 'rock8');
   assert.equal(s.meter, '4/4');
   assert.equal(s.changeMode, 'instant');
-  assert.equal(s.metronome, false);
+  assert.equal(s.timeMode, 'free', 'por defecto, modo libre como en la fase 3');
+  assert.equal(s.click, true);
   assert.equal(s.countIn, false);
+});
+
+test('modo libre: el motor recibe cambio al instante, sin click ni cuenta previa', () => {
+  const s = sanitize({ timeMode: 'free', changeMode: 'bar', click: true, countIn: true, meter: '6/8', bpm: 70 });
+  assert.deepEqual(engineTiming(s), {
+    meter: '6/8', bpm: 70, restartOnChange: false, metronomeVolume: 0.6, changeMode: 'instant', metronome: false, countIn: false,
+  });
+  s.timeMode = 'metronome';
+  const t = engineTiming(s);
+  assert.equal(t.changeMode, 'bar');
+  assert.equal(t.metronome, true);
+  assert.equal(t.countIn, true);
+  s.click = false;
+  assert.equal(engineTiming(s).metronome, false, 'con metrónomo pero sin click audible');
 });
 
 test('cada compás tiene una tabla gesto → patrón con patrones de ese compás', () => {

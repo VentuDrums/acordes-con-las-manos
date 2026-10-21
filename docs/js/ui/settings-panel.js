@@ -53,7 +53,13 @@ export function initSettingsPanel({ settings, notation, onChange, onCalibrate })
     document.querySelectorAll('[data-restart]').forEach((b) => {
       b.setAttribute('aria-pressed', b.dataset.restart === String(settings.restartOnChange));
     });
-    $('#metronomeCheck').checked = settings.metronome;
+    const free = settings.timeMode === 'free';
+    document.querySelectorAll('[data-time-mode]').forEach((b) => {
+      b.setAttribute('aria-pressed', b.dataset.timeMode === settings.timeMode);
+    });
+    $('#timeModeHelp').textContent = t(free ? 'freeModeHelp' : 'metronomeModeHelp');
+    $('#metronomeOptions').hidden = free;
+    $('#clickCheck').checked = settings.click;
     $('#metronomeVolumeRange').value = settings.metronomeVolume;
     $('#countInCheck').checked = settings.countIn;
   }
@@ -134,7 +140,11 @@ export function initSettingsPanel({ settings, notation, onChange, onCalibrate })
     settings.restartOnChange = b.dataset.restart === 'true';
     changed();
   }));
-  $('#metronomeCheck').addEventListener('change', (e) => { settings.metronome = e.target.checked; changed(); });
+  document.querySelectorAll('[data-time-mode]').forEach((b) => b.addEventListener('click', () => {
+    settings.timeMode = b.dataset.timeMode;
+    changed();
+  }));
+  $('#clickCheck').addEventListener('change', (e) => { settings.click = e.target.checked; changed(); });
   $('#metronomeVolumeRange').addEventListener('input', (e) => { settings.metronomeVolume = Number(e.target.value); onChange(); });
   $('#countInCheck').addEventListener('change', (e) => { settings.countIn = e.target.checked; changed(); });
   $('#bassFollowsCheck').addEventListener('change', (e) => { settings.bassFollows = e.target.checked; changed(); });

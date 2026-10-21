@@ -28,6 +28,13 @@ header {
 }
 h1 { margin: 0; font-size: 1.3rem; }
 .header-actions { display: flex; gap: 8px; }
+.header-actions button { white-space: nowrap; }
+@media (max-width: 560px) {
+  h1 { font-size: 1.1rem; }
+  .header-actions .btn-label { display: none; }
+  .header-actions button { font-size: 1.2rem; padding: 6px 12px; }
+  .sound-info { font-size: 0.75rem; max-width: calc(100% - 48px); }
+}
 #metronomeBtn[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); }
 .field-title { margin: 10px 0 6px; color: var(--muted); }
 h2 { margin: 0 0 6px; font-size: 1rem; }
@@ -166,6 +173,7 @@ aside { grid-area: aside; display: grid; gap: 16px; align-content: start; min-wi
   position: absolute; inset: 0; margin: 0; display: flex; align-items: center; justify-content: center;
   font-size: clamp(4rem, 18vw, 10rem); font-weight: 800; color: var(--right); opacity: 0.85; pointer-events: none;
 }
+body.free-mode .beats, body.free-mode .count-in-number { display: none; }
 .chord.pending #chordName { opacity: 0.45; }
 .chord.pending #chordName::after { content: ' …'; }
 
@@ -238,4 +246,4 @@ dialog .panel { margin-top: 12px; }
 body.calibrating .chord, body.calibrating .sound-info { display: none; }
 
 /* Mientras se ve el panel de inicio, el acorde se ve solo en la tabla (en móvil no cabe todo). */
-.overlay:not([hidden]) ~ .chord { display: none; }
+.overlay:not([hidden]) ~ .chord, .overlay:not([hidden]) ~ .sound-info { display: none; }

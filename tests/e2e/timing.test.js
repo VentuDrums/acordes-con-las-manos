@@ -36,6 +36,54 @@ const engineLogs = (page) => page.evaluate(() => {
   return { log: e.log.slice(), notes: e.noteLog.slice(), clicks: e.clickLog.slice() };
 });
 
+test('modo libre por defecto: sin clicks ni pulso; el botón 🥁 pasa al modo metrónomo y vuelve', async () => {
+  const app = await openApp();
+  try {
+    const { page } = app;
+    assert.equal((await page.textContent('#metronomeBtn')).trim(), '🎶 Modo libre');
+    await page.evaluate(() => window.acordes.engine.start());
+    await page.waitForTimeout(1500);
+    assert.equal((await engineLogs(page)).clicks.length, 0, 'en modo libre no hay clicks');
+    assert.ok(await page.isHidden('#beats'), 'en modo libre no se ve el pulso');
+
+    await page.click('#metronomeBtn');
+    assert.equal((await page.textContent('#metronomeBtn')).trim(), '🥁 Metrónomo');
+    assert.ok(await page.isVisible('#beats'));
+    await page.waitForTimeout(1500);
+    assert.ok((await engineLogs(page)).clicks.length >= 2, 'con metrónomo hay clicks');
+
+    await page.click('#metronomeBtn');
+    const n = (await engineLogs(page)).clicks.length;
+    await page.waitForTimeout(1500);
+    assert.equal((await engineLogs(page)).clicks.length, n, 'al volver al modo libre se acaban los clicks');
+    assert.ok(await page.isHidden('#beats'));
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.close();
+  }
+});
+
+test('en modo libre el acorde cambia al instante aunque esté configurado «siguiente compás»', async () => {
+  const app = await openApp();
+  try {
+    const { page } = app;
+    await settingsDo(page, async () => {
+      await page.click('[data-time-mode="metronome"]');
+      await page.click('[data-change-mode="bar"]');
+      await page.click('[data-time-mode="free"]');
+      assert.ok(await page.isHidden('#metronomeOptions'), 'en modo libre se ocultan los ajustes del metrónomo');
+    });
+    await page.click('#legend button[data-gesture="one"]');
+    await page.waitForTimeout(300);
+    await gestureAt(page, 'two', 6, 7);
+    const { log } = await engineLogs(page);
+    assert.equal(log.at(-1).label, 'Rem', 'entra al momento, sin esperar al compás');
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.close();
+  }
+});
+
 test('metrónomo: un click por pulso con acento en la primera parte (4/4 y 6/8)', async () => {
   const app = await openApp();
   try {
@@ -158,6 +206,7 @@ test('siguiente compás: el acorde espera al compás siguiente y se ve en espera
   try {
     const { page } = app;
     await settingsDo(page, async () => {
+      await page.click('[data-time-mode="metronome"]');
       await page.click('[data-change-mode="bar"]');
       await page.fill('#bpmRange', '60');
     });
@@ -210,7 +259,11 @@ test('cuenta previa: un compás de clicks y el acorde entra en el siguiente', as
   const app = await openApp();
   try {
     const { page } = app;
-    await settingsDo(page, () => page.check('#countInCheck'));
+    await settingsDo(page, async () => {
+      await page.click('[data-time-mode="metronome"]');
+      await page.check('#countInCheck');
+      await page.uncheck('#clickCheck');
+    });
     await page.evaluate(() => window.acordes.engine.start());
     await page.waitForTimeout(500);
     await page.click('#legend button[data-gesture="one"]');
@@ -219,10 +272,10 @@ test('cuenta previa: un compás de clicks y el acorde entra en el siguiente', as
     await page.waitForFunction(() => window.acordes.engine.log.some((e) => e.label === 'Do'), null, { timeout: 8000 });
     const { log, clicks } = await engineLogs(page);
     const countClicks = clicks.filter((c) => c.countIn);
-    assert.equal(countClicks.length, 4, 'cuatro clicks en 4/4 aunque el metrónomo esté apagado');
+    assert.equal(countClicks.length, 4, 'cuatro clicks en 4/4 aunque el click esté desactivado');
     assert.equal(countClicks[0].step, 0);
     assert.equal(log.find((e) => e.label === 'Do').unit, countClicks[0].unit + 16, 'el acorde entra un compás después');
-    assert.ok(!clicks.some((c) => !c.countIn), 'fuera de la cuenta no hay clicks (metrónomo apagado)');
+    assert.ok(!clicks.some((c) => !c.countIn), 'fuera de la cuenta no hay clicks (click desactivado)');
     assert.ok(await page.isHidden('#countIn'));
     assert.deepEqual(app.errors, []);
   } finally {
