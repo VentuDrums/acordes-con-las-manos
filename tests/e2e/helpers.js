@@ -70,14 +70,15 @@ export function buildCameraVideo(name, scenes, seconds = 2) {
 }
 
 // Vídeo con una foto que se mueve en vertical: de fromY a toY (fracción del alto) entre los segundos
-// 1 y 1 + moveSeconds, quieta antes y después. side 'right' = mitad izquierda de la cámara (mano derecha).
-export function buildMovingVideo(name, photo, { side = 'right', fromY, toY, moveSeconds = 3, total = 8, height = 140 }) {
+// startAt y startAt + moveSeconds, quieta antes y después. side 'right' = mitad izquierda de la cámara
+// (mano derecha).
+export function buildMovingVideo(name, photo, { side = 'right', fromY, toY, startAt = 1, moveSeconds = 3, total = 8, height = 140 }) {
   const out = path.join(CACHE, `${name}.mjpeg`);
   if (fs.existsSync(out)) return out;
   const x = side === 'right' ? `160-w/2` : `480-w/2`;
   const y0 = fromY * 360;
   const y1 = toY * 360;
-  const y = `if(lt(t,1),${y0},if(gt(t,${1 + moveSeconds}),${y1},${y0}+(${y1}-${y0})*(t-1)/${moveSeconds}))-h/2`;
+  const y = `if(lt(t,${startAt}),${y0},if(gt(t,${startAt + moveSeconds}),${y1},${y0}+(${y1}-${y0})*(t-${startAt})/${moveSeconds}))-h/2`;
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error',
     '-f', 'lavfi', '-t', String(total), '-i', 'color=c=0x404040:s=640x360:r=15',
     '-loop', '1', '-t', String(total), '-i', path.join(IMG, photo),

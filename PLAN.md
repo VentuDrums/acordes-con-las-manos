@@ -177,7 +177,8 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 - Los gestos 3 dedos, 4 dedos, 🤙 y 🤘 no tienen fotos reales de prueba: solo están comprobados con manos simuladas. Hay que verificarlos con manos de verdad.
 **Notas de la fase 3**
 - Ritmos: un reloj de semicorcheas marca los pasos. Al cambiar de acorde o de patrón, el ritmo sigue cuadrado con el compás (comportamiento «seguir a tempo»; la opción de reiniciar llega en la fase 4).
-- El bloque sostenido suena con el pad; los patrones rítmicos, con un sonido de teclado provisional de ataque rápido. Los sonidos definitivos llegan en la fase 6.
+- El bloque sostenido suena con el pad; los patrones rítmicos, con un piano de muestras grabadas (`docs/audio/piano`, 1,6 MB, ver CREDITOS.md). El sonido de teclado sintetizado del principio era demasiado flojo; queda solo como reserva mientras carga el piano. La elección de sonido llega en la fase 6.
+- El modo de la mano derecha (inversión o ritmo) se cambia también desde el panel de debajo de la cámara; las tablas se editan en la configuración.
 - Fader: medio alto de la imagen de recorrido va de volumen 0 a máximo. El volumen se guarda.
 - En pantallas anchas la tabla de la mano derecha va debajo de la cámara para que todo quepa sin scroll en la tablet.
 

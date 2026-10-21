@@ -3,7 +3,8 @@
 // Suena el acorde actual con el patrón actual:
 // - Bloque sostenido: el acorde suena con un pad mientras no cambie.
 // - Patrones rítmicos: un reloj de semicorcheas (Tone.Transport) dispara las notas de cada paso
-//   con un sonido de teclado. Un cambio de acorde se oye desde el siguiente paso, a tempo.
+//   con un piano (muestras grabadas). Un cambio de acorde se oye desde el siguiente paso, a tempo.
+//   Mientras el piano carga, se usa un teclado sintetizado para no dejar huecos.
 /* global Tone */
 import { PATTERNS, notesForStep } from '../music/patterns.js';
 
@@ -11,6 +12,12 @@ const MAX_LOG = 200;
 const MAX_NOTE_LOG = 400;
 
 const unique = (notes) => [...new Set(notes)];
+
+// Una muestra de piano cada tres semitonos; Tone.Sampler calcula las notas intermedias.
+const PIANO_URLS = Object.fromEntries(
+  [2, 3, 4, 5, 6].flatMap((o) => [['C', 'C'], ['D#', 'Ds'], ['F#', 'Fs'], ['A', 'A']]
+    .map(([note, file]) => [`${note}${o}`, `${file}${o}.mp3`])).concat([['C7', 'C7.mp3']]),
+);
 
 export class AudioEngine {
   constructor() {
@@ -43,6 +50,14 @@ export class AudioEngine {
       volume: -14,
     }).connect(reverb);
     this.keys.maxPolyphony = 48;
+    this.pianoLoaded = false;
+    this.piano = new Tone.Sampler({
+      urls: PIANO_URLS,
+      baseUrl: 'audio/piano/',
+      release: 0.6,
+      volume: -4,
+      onload: () => { this.pianoLoaded = true; },
+    }).connect(reverb);
     Tone.Transport.scheduleRepeat((time) => this.tick(time), '16n');
     Tone.Transport.start('+0.05');
     this.ready = true;
@@ -74,6 +89,7 @@ export class AudioEngine {
     this.voicing = null;
     this.hold([]);
     this.keys.releaseAll(Tone.immediate());
+    this.piano.releaseAll(Tone.immediate());
     if (wasPlaying) this.record({ type: 'silence' });
   }
 
@@ -106,9 +122,10 @@ export class AudioEngine {
     if (!this.voicing || pattern.sustain) return;
     const sixteenth = Math.round(Tone.Transport.getTicksAtTime(time) / (Tone.Transport.PPQ / 4));
     const step = sixteenth % pattern.steps;
+    const instrument = this.pianoLoaded ? this.piano : this.keys;
     for (const ev of notesForStep(this.pattern, step, this.voicing)) {
-      this.keys.triggerAttackRelease(this.toNotes(ev.notes), ev.duration, time, ev.velocity);
-      this.noteLog.push({ step, notes: ev.notes, at: performance.now() });
+      instrument.triggerAttackRelease(this.toNotes(ev.notes), ev.duration, time, ev.velocity);
+      this.noteLog.push({ step, notes: ev.notes, instrument: this.pianoLoaded ? 'piano' : 'keys', at: performance.now() });
       if (this.noteLog.length > MAX_NOTE_LOG) this.noteLog.shift();
     }
   }

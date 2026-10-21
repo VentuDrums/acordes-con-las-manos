@@ -177,7 +177,9 @@ function renderChord() {
 
 function renderRight() {
   const inversion = settings.rightMode === 'inversion';
-  $('#rightLegendTitle').textContent = t(inversion ? 'rightLegendInversion' : 'rightLegendRhythm');
+  document.querySelectorAll('[data-quick-mode]').forEach((b) => {
+    b.setAttribute('aria-pressed', b.dataset.quickMode === settings.rightMode);
+  });
   $('#rightLegend').innerHTML = ['fist', ...ASSIGNABLE].map((g) => {
     let what = t('faderLabel');
     if (g !== 'fist') what = inversion ? t(`inversion_${settings.invMap[g]}`) : t(`pattern_${settings.patMap[g]}`);
@@ -255,6 +257,12 @@ initSettingsPanel({
 });
 
 $('#startBtn').addEventListener('click', start);
+// Cambio rápido de modo de la mano derecha desde la pantalla principal (las tablas se editan en la configuración).
+document.querySelectorAll('[data-quick-mode]').forEach((b) => b.addEventListener('click', () => {
+  settings.rightMode = b.dataset.quickMode;
+  state.rightGesture = null;
+  onSettingsChange();
+}));
 $('#rightLegend').addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-gesture]');
   if (!btn) return;

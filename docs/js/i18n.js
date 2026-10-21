@@ -65,8 +65,7 @@ const STRINGS = {
     leftHandLower: 'mano izquierda',
     rightHandLower: 'mano derecha',
 
-    rightLegendInversion: 'Mano derecha · inversión',
-    rightLegendRhythm: 'Mano derecha · ritmo',
+    rightModeSwitch: 'Modo de la mano derecha',
     rightLegendHint: 'Toca una fila para probarla. Puño + subir o bajar la mano: volumen.',
     faderLabel: 'Fader de volumen',
     volume: 'Volumen',

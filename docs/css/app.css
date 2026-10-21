@@ -142,6 +142,9 @@ aside { grid-area: aside; display: grid; gap: 16px; align-content: start; min-wi
 .legend .what { white-space: nowrap; }
 .legend .what b { color: var(--accent); }
 .legend.right h2, .panel.right h3 { color: var(--right); }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.panel-head h2 { margin: 0; }
+.panel-head .segmented { margin-bottom: 0; }
 #rightLegend button { grid-template-columns: 2.2rem minmax(0, 1fr); }
 #rightLegend .label { display: none; }
 #rightLegend .what { white-space: normal; text-align: left; font-size: 0.9rem; }

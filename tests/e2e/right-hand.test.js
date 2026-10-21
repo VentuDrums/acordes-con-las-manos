@@ -48,7 +48,7 @@ test('modo ritmo: el patrón suena a tempo y el cambio de acorde no lo descuadra
     await page.click('[data-right-mode="rhythm"]');
     await page.fill('#bpmRange', '120');
     await page.click('#settingsDialog .dialog-head button');
-    assert.equal(await text(page, '#rightLegendTitle'), 'Mano derecha · ritmo');
+    assert.equal(await page.getAttribute('[data-quick-mode="rhythm"]', 'aria-pressed'), 'true');
 
     await page.click('#legend button[data-gesture="one"]'); // Do
     await page.click('#rightLegend button[data-gesture="four"]'); // arpegio ascendente
@@ -102,9 +102,65 @@ test('modo ritmo: el patrón suena a tempo y el cambio de acorde no lo descuadra
   }
 });
 
+test('cambio rápido de modo desde la pantalla principal, con las tablas ya configuradas', async () => {
+  const app = await openApp();
+  try {
+    const { page } = app;
+    await page.click('#legend button[data-gesture="one"]'); // Do
+    await page.click('#rightLegend button[data-gesture="two"]'); // 1ª inversión
+    assert.equal(await text(page, '#rightLegend button[data-gesture="two"] .what'), '1ª inversión');
+
+    await page.click('[data-quick-mode="rhythm"]');
+    assert.equal(await page.getAttribute('[data-quick-mode="rhythm"]', 'aria-pressed'), 'true');
+    assert.equal(await text(page, '#rightLegend button[data-gesture="two"] .what'), 'Negras');
+    await page.click('#rightLegend button[data-gesture="four"]');
+    assert.equal(await text(page, '#soundInfo'), '1ª inversión · Arpegio ascendente', 'la inversión elegida se mantiene');
+
+    await page.click('[data-quick-mode="inversion"]');
+    assert.equal(await text(page, '#rightLegend button[data-gesture="two"] .what'), '1ª inversión');
+    assert.equal(await text(page, '#soundInfo'), '1ª inversión · Arpegio ascendente', 'el ritmo elegido se mantiene');
+
+    // La configuración refleja el modo elegido desde la pantalla principal.
+    await page.click('#settingsBtn');
+    assert.equal(await page.getAttribute('[data-right-mode="inversion"]', 'aria-pressed'), 'true');
+    await page.click('#settingsDialog .dialog-head button');
+    await page.reload();
+    assert.equal(await page.getAttribute('[data-quick-mode="inversion"]', 'aria-pressed'), 'true');
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.close();
+  }
+});
+
+test('los ritmos suenan con el piano: las muestras cargan y se oyen', async () => {
+  const app = await openApp();
+  try {
+    const { page } = app;
+    await page.click('[data-quick-mode="rhythm"]');
+    await page.click('#legend button[data-gesture="one"]');
+    await page.click('#rightLegend button[data-gesture="three"]'); // rasgueo pop
+    await page.waitForFunction(() => window.acordes.engine.pianoLoaded, null, { timeout: 15000 });
+    const level = await page.evaluate(async () => {
+      const m = new Tone.Meter({ smoothing: 0 });
+      Tone.Destination.connect(m);
+      let max = -Infinity;
+      for (let i = 0; i < 40; i++) { await new Promise((r) => setTimeout(r, 50)); max = Math.max(max, m.getValue()); }
+      return max;
+    });
+    const last = await page.evaluate(() => window.acordes.engine.noteLog.at(-1));
+    console.log('Nivel máximo con el piano:', level.toFixed(1), 'dB · instrumento:', last.instrument);
+    assert.equal(last.instrument, 'piano');
+    assert.ok(level > -40, `nivel ${level}`);
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.close();
+  }
+});
+
 test('fader: puño derecho y bajar la mano baja el volumen; al soltar se queda', async () => {
-  // Puño en la parte de la mano derecha, que baja del 30 % al 75 % del alto.
-  const video = buildMovingVideo('fader-baja', 'fist.jpg', { side: 'right', fromY: 0.3, toY: 0.75, total: 12 });
+  // Puño en la parte de la mano derecha: quieto arriba 4 s (para agarrarlo aunque el modelo tarde
+  // en cargar) y luego baja del 30 % al 75 % del alto. El vídeo se repite cada 12 s.
+  const video = buildMovingVideo('fader-baja-v2', 'fist.jpg', { side: 'right', fromY: 0.3, toY: 0.75, startAt: 4, total: 12 });
   const app = await openApp({ video });
   try {
     const { page } = app;
@@ -112,7 +168,7 @@ test('fader: puño derecho y bajar la mano baja el volumen; al soltar se queda',
     await page.waitForFunction(() => document.querySelector('#startPanel').hidden, null, { timeout: 60000 });
     await page.waitForFunction(() => window.acordes.fader.grabbing, null, { timeout: 20000 });
     assert.match(await text(page, '#rightSeen'), /Puño/);
-    await page.waitForFunction(() => window.acordes.settings.volume < 0.3, null, { timeout: 20000 });
+    await page.waitForFunction(() => window.acordes.settings.volume < 0.3, null, { timeout: 40000 });
     const vol = await page.evaluate(() => window.acordes.settings.volume);
     console.log('Volumen tras bajar el puño:', vol.toFixed(2));
     assert.ok(await page.evaluate(() => document.querySelector('#volume').classList.contains('grabbing')));
