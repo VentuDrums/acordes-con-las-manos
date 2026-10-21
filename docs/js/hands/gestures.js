@@ -5,26 +5,35 @@ export const GESTURES = {
   five: '🖐️', shaka: '🤙', rock: '🤘', thumb: '👍',
 };
 
+// Gestos a los que se puede asignar un acorde (el puño tiene función fija).
+export const ASSIGNABLE = ['one', 'two', 'three', 'four', 'five', 'shaka', 'rock', 'thumb'];
+
 // Valor especial: la mano no está en cámara.
 export const ABSENT = 'absent';
 
 // Umbrales ajustados con fotos de manos reales (ver tests/e2e/photos.test.js).
 // Un dedo está estirado si su punta está claramente más lejos de la muñeca que su articulación media.
-const FINGER_EXTENDED_RATIO = 1.1;
+export const FINGER_EXTENDED_RATIO = 1.1;
 // Pulgar fuera: su punta se aleja de la base del meñique más que la base del propio pulgar.
-const THUMB_OUT_RATIO = 1.1;
+export const THUMB_OUT_RATIO = 1.1;
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, (a.z ?? 0) - (b.z ?? 0));
 
-// [pulgar, índice, corazón, anular, meñique] → estirado o no.
+// Medidas de cada dedo [pulgar, índice, corazón, anular, meñique]: cuanto mayor, más estirado.
+// Pulgar: distancia de su punta a la base del meñique / la de la base del pulgar.
+// Resto: distancia de la punta a la muñeca / la de su articulación media.
 // Conviene pasar worldLandmarks (en metros): no dependen de lo lejos que esté la mano.
-export function fingerStates(lm) {
+export function fingerMeasures(lm) {
   const wrist = lm[0];
-  const thumb = dist(lm[4], lm[17]) > dist(lm[2], lm[17]) * THUMB_OUT_RATIO;
-  const others = [[6, 8], [10, 12], [14, 16], [18, 20]].map(
-    ([pip, tip]) => dist(wrist, lm[tip]) > dist(wrist, lm[pip]) * FINGER_EXTENDED_RATIO
-  );
+  const thumb = dist(lm[4], lm[17]) / dist(lm[2], lm[17]);
+  const others = [[6, 8], [10, 12], [14, 16], [18, 20]].map(([pip, tip]) => dist(wrist, lm[tip]) / dist(wrist, lm[pip]));
   return [thumb, ...others];
+}
+
+// [pulgar, índice, corazón, anular, meñique] → estirado o no.
+export function fingerStates(lm) {
+  const m = fingerMeasures(lm);
+  return m.map((v, i) => v > (i === 0 ? THUMB_OUT_RATIO : FINGER_EXTENDED_RATIO));
 }
 
 // El pulgar solo se tiene en cuenta donde hace falta para distinguir gestos (es el dedo menos fiable).

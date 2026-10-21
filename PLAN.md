@@ -2,7 +2,7 @@
 
 Sinte de acompañamiento que se toca con gestos delante de la webcam. Proyecto para el máster de IA aplicada a la educación, abierto a cualquiera que quiera usarlo.
 
-Estado: **plan aprobado. Fase 1 terminada**, pendiente de que la pruebe el usuario.
+Estado: **fase 2 terminada**, pendiente de que la pruebe el usuario.
 
 ## 1. Objetivo y público
 
@@ -43,6 +43,16 @@ Se reconocen con reglas sobre los puntos de la mano (qué dedos están estirados
 - **Mano izquierda fuera de cámara:** cuenta como puño (deja de sonar), con un margen de unos 0,3 s para que no corte si MediaPipe pierde la mano un momento.
 - **Mano derecha fuera de cámara:** no cambia nada. Si estaba moviendo el fader, el volumen se queda donde estaba.
 - **Mano izquierda y derecha:** se distinguen por su posición en la imagen. Habrá un ajuste por si salen al revés.
+
+**Modo de calibración de gestos**
+
+Sirve para afinar el reconocimiento con las manos reales de quien usa la app.
+
+- Se abre desde la configuración.
+- Eliges la mano (izquierda o derecha) y un gesto. Tras una cuenta atrás de 3 s, la app graba 3 s de medidas de la mano.
+- Al terminar muestra cuántas veces ha reconocido bien el gesto y con qué lo ha confundido.
+- Mientras se calibra no suena nada.
+- Un botón descarga todas las medidas en un archivo (JSON) para ajustar los umbrales con esos datos.
 
 ## 4. Mano izquierda: elige el acorde
 
@@ -151,7 +161,7 @@ Cada fase termina con algo que se puede probar y enseñar.
    - Pantalla de tocar con la cámara y las manos dibujadas.
    - La mano izquierda toca los grados de Do mayor con un pad.
    - Cambio de acorde al instante.
-2. **Mano izquierda completa:** modo escala con todos sus ajustes, modo personalizado y panel de configuración.
+2. **Mano izquierda completa:** modo escala con todos sus ajustes, modo personalizado, panel de configuración (con el ajuste para intercambiar las manos) y modo de calibración de gestos.
 3. **Mano derecha:** modos inversión y ritmo, con la tabla editable, y fader de volumen.
 4. **Tiempo:** compases, patrones de fábrica, cuantización, metrónomo y cuenta previa.
 5. **Editor de patrones.**
@@ -165,6 +175,12 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 **Notas de la fase 1**
 - Los umbrales del reconocimiento de dedos se ajustaron con unas 120 fotos de manos reales: acierta el 92 %. Las que fallan están de canto o del dorso; tocando con la palma de frente funciona mucho mejor.
 - Los gestos 3 dedos, 4 dedos, 🤙 y 🤘 no tienen fotos reales de prueba: solo están comprobados con manos simuladas. Hay que verificarlos con manos de verdad.
+**Notas de la fase 2**
+- Configuración en un panel desplegable (botón ⚙️). Los ajustes se guardan en el navegador.
+- En el modo personalizado, el nombre de un acorde cuya nota está en la escala elegida se escribe como en esa tonalidad (Sol♯° en La menor armónica); si no está, con las grafías habituales (Si♭, Re♭, Fa♯…).
+- La calibración guarda, por cada fotograma, el gesto pedido, el reconocido, las medidas de los dedos y los 21 puntos de la mano.
+
+**Notas de la fase 1 (continuación)**
 - En la tablet (Xiaomi Pad 8 Pro) el modo GPU de MediaPipe detectaba peor las manos y el modo CPU va fluido, así que se usa CPU por defecto. `?delegate=GPU` al final de la dirección prueba la GPU.
 - Primera prueba en la tablet: costaba encontrar la mano al principio. Ahora cada mano se busca en su zona de la imagen (el 65 % de cada lado, con solape en el centro) y con confianza mínima de 0,3 en vez de 0,5. En pruebas con manos pequeñas (lejos de la cámara) pasa de encontrar 11 de 36 manos a 25 de 36, sin falsas detecciones en fotos sin manos. Cuesta el doble de cálculo (dos detectores).
 

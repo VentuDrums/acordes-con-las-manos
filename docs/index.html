@@ -11,6 +11,7 @@
 <body>
   <header>
     <h1 data-i18n="title">Acordes con las manos</h1>
+    <button id="settingsBtn" aria-haspopup="dialog">⚙️ <span data-i18n="settings"></span></button>
   </header>
 
   <main>
@@ -27,6 +28,7 @@
         <span id="chordName">—</span>
         <span id="chordDegree"></span>
       </div>
+      <p id="calibBanner" class="calib-banner" role="status" hidden></p>
     </section>
 
     <aside>
@@ -43,12 +45,63 @@
         </div>
       </div>
 
-      <section class="legend">
-        <h2 data-i18n="legendTitle"></h2>
+      <section class="panel legend" id="legendPanel">
+        <h2 id="legendTitle"></h2>
         <p class="hint" data-i18n="legendHint"></p>
         <ul id="legend"></ul>
       </section>
+
+      <section class="panel calib" id="calibPanel" hidden>
+        <h2 data-i18n="calibTitle"></h2>
+        <p class="hint" data-i18n="calibHelp"></p>
+        <div class="segmented" role="group" data-i18n-title="calibHand">
+          <button data-calib-hand="left" aria-pressed="true" data-i18n="leftHand"></button>
+          <button data-calib-hand="right" aria-pressed="false" data-i18n="rightHand"></button>
+        </div>
+        <ul id="calibList"></ul>
+        <div class="row">
+          <button id="downloadBtn" class="primary-soft" disabled></button>
+          <button id="clearCalibBtn" data-i18n="clearData"></button>
+          <button id="exitCalibBtn" data-i18n="exitCalibration"></button>
+        </div>
+      </section>
     </aside>
   </main>
+
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle">
+    <form method="dialog" class="dialog-head">
+      <h2 id="settingsTitle" data-i18n="settings"></h2>
+      <button value="close" data-i18n="close"></button>
+    </form>
+
+    <section class="panel">
+      <h3 data-i18n="leftHandSection"></h3>
+      <div class="segmented" role="group">
+        <button data-left-mode="scale" data-i18n="modeScale"></button>
+        <button data-left-mode="custom" data-i18n="modeCustom"></button>
+      </div>
+      <p class="hint" id="leftModeHelp"></p>
+      <div class="fields">
+        <label><span data-i18n="tonic"></span> <select id="tonicSelect"></select></label>
+        <label><span data-i18n="scale"></span> <select id="scaleSelect"></select></label>
+        <label class="check"><input type="checkbox" id="seventhsCheck"> <span data-i18n="sevenths"></span></label>
+      </div>
+      <div id="customEditor" hidden>
+        <button id="fillFromScaleBtn" data-i18n="fillFromScale"></button>
+        <ul id="customList"></ul>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h3 data-i18n="handsSection"></h3>
+      <label class="check"><input type="checkbox" id="swapHandsCheck"> <span data-i18n="swapHands"></span></label>
+    </section>
+
+    <section class="panel">
+      <h3 data-i18n="calibrationSection"></h3>
+      <p class="hint" data-i18n="calibrationHelp"></p>
+      <button id="calibrateBtn" data-i18n="calibrate"></button>
+    </section>
+  </dialog>
 </body>
 </html>

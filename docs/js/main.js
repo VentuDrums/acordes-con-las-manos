@@ -1,20 +1,21 @@
-// Fase 1: la mano izquierda toca los grados de Do mayor con un pad, al instante.
+// Fase 2: la mano izquierda elige el acorde (por escala o a tu gusto), con configuración y calibración.
 import { GESTURE_HOLD_MS, HAND_ABSENT_MS } from './config.js';
 import { t, translatePage } from './i18n.js';
-import { diatonicChord, romanNumeral, chordName, voiceChord } from './music/theory.js';
+import { voiceChord, noteName } from './music/theory.js';
+import { chordForGesture, describe, spellingFor } from './music/left-hand.js';
 import { GESTURES, ABSENT, fingerStates, classify, GestureFilter } from './hands/gestures.js';
 import { HandTracker } from './hands/tracker.js';
 import { AudioEngine } from './audio/engine.js';
 import { drawStage } from './ui/stage.js';
+import { loadSettings, saveSettings } from './settings.js';
+import { initSettingsPanel } from './ui/settings-panel.js';
+import { CalibrationPanel } from './ui/calibration-panel.js';
 
-// Grado de la escala (0 = I) que toca cada gesto.
-const SCALE_DEGREES = { one: 0, two: 1, three: 2, four: 3, five: 4, shaka: 5, rock: 6 };
 const LEGEND_ORDER = ['fist', 'one', 'two', 'three', 'four', 'five', 'shaka', 'rock', 'thumb'];
-const TONIC = 0;
-const SCALE = 'major';
 const NOTATION = 'latin';
 
 const $ = (sel) => document.querySelector(sel);
+const settings = loadSettings();
 const engine = new AudioEngine();
 const tracker = new HandTracker();
 const filters = {
@@ -24,29 +25,36 @@ const filters = {
 // Último gesto estable de cada mano según la cámara (la cámara solo actúa cuando cambia).
 const lastStable = { left: ABSENT, right: ABSENT };
 const state = {
-  leftGesture: ABSENT,  // último gesto estable de la mano izquierda
-  chord: null,          // { chord, degree } que suena, o null en silencio
+  started: false,
+  delegate: null,
+  leftGesture: ABSENT, // último gesto aplicado de la mano izquierda
+  playing: null,       // { chord, degree } que suena, o null en silencio
 };
 
-function chordForGesture(g) {
-  const degree = SCALE_DEGREES[g];
-  if (degree === undefined) return null;
-  return { chord: diatonicChord(TONIC, SCALE, degree), degree };
-}
-
 function applyLeft(g) {
-  state.leftGesture = g;
+  if (calibration.active) return;
   if (g === 'fist' || g === ABSENT) {
-    state.chord = null;
+    state.leftGesture = g;
+    state.playing = null;
     engine.silence();
   } else {
-    const next = chordForGesture(g);
-    if (!next) return; // gesto sin asignar: sigue sonando lo que había
-    state.chord = next;
+    const next = chordForGesture(settings, g);
+    if (!next) return; // gesto sin acorde: sigue sonando lo que había
+    state.leftGesture = g;
+    state.playing = next;
     const v = voiceChord(next.chord);
-    engine.playChord([v.bass, ...v.notes], chordName(next.chord, NOTATION));
+    engine.playChord([v.bass, ...v.notes], describe(settings, next, NOTATION).name);
   }
   renderChord();
+}
+
+// Al cambiar los ajustes, el gesto que se está haciendo pasa a tocar su acorde nuevo.
+function onSettingsChange() {
+  saveSettings(settings);
+  tracker.swap = settings.swapHands;
+  renderLegend();
+  if (state.playing && state.leftGesture !== ABSENT) applyLeft(state.leftGesture);
+  else renderChord();
 }
 
 // ---------- Bucle de la cámara ----------
@@ -67,12 +75,15 @@ function loop() {
       }
       renderHand(side, hand, fingers, seen[side]);
     }
+    calibration.onFrame(hands, now);
     drawStage($('#view'), tracker.video, hands, seen);
   }
   requestAnimationFrame(loop);
 }
 
 async function start() {
+  if (state.started) return;
+  state.started = true;
   $('#startBtn').hidden = true;
   $('#intro').hidden = true;
   $('#palmTip').hidden = true;
@@ -82,8 +93,9 @@ async function start() {
     setStatus(t('loadingModel'));
     // Por defecto se usa el procesador: en algunas tablets Android la GPU detecta peor las manos.
     // ?delegate=GPU prueba la tarjeta gráfica.
-    const delegate = new URLSearchParams(location.search).get('delegate') === 'GPU' ? 'GPU' : 'CPU';
-    await tracker.loadModel(delegate);
+    state.delegate = new URLSearchParams(location.search).get('delegate') === 'GPU' ? 'GPU' : 'CPU';
+    await tracker.loadModel(state.delegate);
+    tracker.swap = settings.swapHands;
     setStatus(t('askingCamera'));
     await tracker.startCamera($('#cam'));
     $('#startPanel').hidden = true;
@@ -102,12 +114,13 @@ function setStatus(text) {
 }
 
 function renderChord() {
-  if (!state.chord) {
+  if (!state.playing) {
     $('#chordName').textContent = engine.ready ? t('silence') : '—';
     $('#chordDegree').textContent = '';
   } else {
-    $('#chordName').textContent = chordName(state.chord.chord, NOTATION);
-    $('#chordDegree').textContent = romanNumeral(state.chord.chord, state.chord.degree);
+    const d = describe(settings, state.playing, NOTATION);
+    $('#chordName').textContent = d.name;
+    $('#chordDegree').textContent = d.degree;
   }
   document.querySelectorAll('#legend button').forEach((b) => {
     b.setAttribute('aria-pressed', b.dataset.gesture === state.leftGesture);
@@ -122,16 +135,54 @@ function renderHand(side, hand, fingers, gesture) {
 }
 
 function renderLegend() {
+  $('#legendTitle').textContent = settings.leftMode === 'scale'
+    ? t('legendTitleScale', {
+      scale: `${noteName(settings.tonic, NOTATION, spellingFor(settings))} ${t(`scale_${settings.scale}`).toLowerCase()}`,
+    })
+    : t('legendTitleCustom');
   $('#legend').innerHTML = LEGEND_ORDER.map((g) => {
-    const res = chordForGesture(g);
-    const what = g === 'fist'
-      ? t('silence')
-      : res ? `<b>${romanNumeral(res.chord, res.degree)}</b> · ${chordName(res.chord, NOTATION)}` : t('unassigned');
-    return `<li><button data-gesture="${g}" aria-pressed="false"${!res && g !== 'fist' ? ' disabled' : ''}>
+    const entry = g === 'fist' ? null : chordForGesture(settings, g);
+    let what = t('unassigned');
+    if (g === 'fist') what = t('silence');
+    else if (entry) {
+      const d = describe(settings, entry, NOTATION);
+      what = d.degree ? `<b>${d.degree}</b> · ${d.name}` : d.name;
+    }
+    const disabled = !entry && g !== 'fist' ? ' disabled' : '';
+    return `<li><button data-gesture="${g}" aria-pressed="false"${disabled}>
       <span class="emoji">${GESTURES[g]}</span><span class="label">${t(`gesture_${g}`)}</span><span class="what">${what}</span>
     </button></li>`;
   }).join('');
+  renderChord();
 }
+
+const calibration = new CalibrationPanel({
+  onEnter: () => {
+    state.playing = null;
+    engine.silence();
+    renderChord();
+  },
+  onExit: () => {
+    // Al salir, la mano izquierda vuelve a mandar desde su gesto actual.
+    if (lastStable.left !== ABSENT) applyLeft(lastStable.left);
+  },
+  getMeta: () => ({
+    userAgent: navigator.userAgent,
+    delegate: state.delegate,
+    video: tracker.video ? { width: tracker.video.videoWidth, height: tracker.video.videoHeight } : null,
+    swapHands: settings.swapHands,
+  }),
+});
+
+initSettingsPanel({
+  settings,
+  notation: NOTATION,
+  onChange: onSettingsChange,
+  onCalibrate: async () => {
+    calibration.enter();
+    await start();
+  },
+});
 
 $('#startBtn').addEventListener('click', start);
 $('#legend').addEventListener('click', async (e) => {
@@ -143,7 +194,6 @@ $('#legend').addEventListener('click', async (e) => {
 
 translatePage();
 renderLegend();
-renderChord();
 
 // Acceso para depurar y para los tests automáticos.
-window.acordes = { engine, state, filters };
+window.acordes = { engine, state, filters, settings, calibration };
