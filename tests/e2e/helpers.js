@@ -70,8 +70,7 @@ export function buildCameraVideo(name, scenes, seconds = 2) {
 }
 
 // Abre la app en Chromium. Las librerías de CDN se sirven desde node_modules (mismas versiones).
-// Chromium de pruebas no tiene GPU (la emula muy despacio), así que se fuerza la CPU.
-export async function openApp({ video, viewport = { width: 1280, height: 800 }, query = '?delegate=CPU' } = {}) {
+export async function openApp({ video, viewport = { width: 1280, height: 800 }, query = '' } = {}) {
   const server = await startServer(0, { '/__fixtures/': IMG });
   const args = ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream',
     '--autoplay-policy=no-user-gesture-required'];

@@ -80,8 +80,9 @@ async function start() {
   renderChord();
   try {
     setStatus(t('loadingModel'));
-    // ?delegate=CPU fuerza el procesador si la GPU del dispositivo da problemas.
-    const delegate = new URLSearchParams(location.search).get('delegate') === 'CPU' ? 'CPU' : 'GPU';
+    // Por defecto se usa el procesador: en algunas tablets Android la GPU detecta peor las manos.
+    // ?delegate=GPU prueba la tarjeta gráfica.
+    const delegate = new URLSearchParams(location.search).get('delegate') === 'GPU' ? 'GPU' : 'CPU';
     await tracker.loadModel(delegate);
     setStatus(t('askingCamera'));
     await tracker.startCamera($('#cam'));

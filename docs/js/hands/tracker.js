@@ -37,8 +37,8 @@ export class HandTracker {
     this.canvases = {};
   }
 
-  // delegate: 'GPU' (por defecto, con CPU de reserva) o 'CPU'.
-  async loadModel(delegate = 'GPU') {
+  // delegate: 'CPU' (por defecto) o 'GPU' (con CPU de reserva si falla).
+  async loadModel(delegate = 'CPU') {
     const { FilesetResolver, HandLandmarker } = await import(`${MEDIAPIPE_URL}/vision_bundle.mjs`);
     const vision = await FilesetResolver.forVisionTasks(`${MEDIAPIPE_URL}/wasm`);
     const create = (d) => HandLandmarker.createFromOptions(vision, {

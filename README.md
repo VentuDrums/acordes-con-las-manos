@@ -10,7 +10,7 @@ Sinte de acompañamiento que se toca con gestos de las manos delante de la cáma
 
 Abre la app publicada en GitHub Pages con Chrome o Edge, pulsa «Empezar» y permite el uso de la cámara. Pon la palma de frente a la cámara, con buena luz.
 
-Si la tarjeta gráfica del dispositivo da problemas, añade `?delegate=CPU` al final de la dirección.
+El reconocimiento usa el procesador (CPU). Para probar la tarjeta gráfica, añade `?delegate=GPU` al final de la dirección.
 
 ## Desarrollo
 
