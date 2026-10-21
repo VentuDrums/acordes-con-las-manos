@@ -2,7 +2,7 @@
 
 Sinte de acompañamiento que se toca con gestos delante de la webcam. Proyecto para el máster de IA aplicada a la educación, abierto a cualquiera que quiera usarlo.
 
-Estado: **fase 3 terminada**, pendiente de que la pruebe el usuario.
+Estado: **fase 4 terminada**, pendiente de que la pruebe el usuario.
 
 ## 1. Objetivo y público
 
@@ -80,14 +80,18 @@ El modo se elige en la configuración. En cada modo, el valor que no controla la
 
 ## 6. Tiempo y cambio de acorde
 
-- **Tempo:** se ajusta a mano en la app.
-- **Compás:** se elige en un selector: 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 y 12/8.
+- **Tempo:** se ajusta a mano en la app. En los compases de subdivisión ternaria (3/8, 6/8, 9/8, 12/8) el pulso es la negra con puntillo.
+- **Compás:** se elige en un selector: 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 y 12/8. Cada compás guarda su propia tabla gesto → patrón.
 - **Momento del cambio de acorde:** al instante, en el siguiente pulso o en el siguiente compás.
+  - **Al instante:** al cambiar de acorde, lo que aún suena del acorde anterior (por ejemplo, un bajo largo) se corta y el acorde nuevo entra **en ese momento** con el resto de su duración, aunque sea un poco tarde (decisión del usuario tras probar la fase 3: antes sonaba el bajo del acorde anterior si el cambio no llegaba con antelación).
+  - **En el siguiente pulso o compás:** el acorde nuevo espera a ese momento. Si el gesto llega un poco tarde (hasta una semicorchea después), cuenta para el pulso o compás que acaba de empezar y se corrige al momento.
+  - El margen con el que se preparan las notas baja de 0,1 s a 0,05 s, para que haya menos cambios «tarde».
+  - El puño (silencio) actúa siempre al momento.
 - **Al cambiar de acorde dentro de un patrón:** se elige entre seguir a tempo con el acorde nuevo o reiniciar el patrón.
 - **Metrónomo:**
-  - Encender y apagar el click, con volumen propio.
-  - Acento en la primera parte del compás.
-  - Cuenta previa opcional.
+  - Encender y apagar el click (también desde la pantalla principal), con volumen propio. El fader de volumen no le afecta.
+  - Acento en la primera parte del compás. Un click por pulso.
+  - **Cuenta previa opcional:** al empezar a tocar desde el silencio, suena un compás de clicks (aunque el metrónomo esté apagado) y el acorde entra en el compás siguiente.
 
 ## 7. Patrones de acompañamiento
 
@@ -175,6 +179,12 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 **Notas de la fase 1**
 - Los umbrales del reconocimiento de dedos se ajustaron con unas 120 fotos de manos reales: acierta el 92 %. Las que fallan están de canto o del dorso; tocando con la palma de frente funciona mucho mejor.
 - Los gestos 3 dedos, 4 dedos, 🤙 y 🤘 no tienen fotos reales de prueba: solo están comprobados con manos simuladas. Hay que verificarlos con manos de verdad.
+**Notas de la fase 4**
+- Rejilla del reloj: semicorcheas en 2/4, 3/4 y 4/4; corcheas en 3/8, 6/8, 9/8 y 12/8. La lógica de cuándo entra un cambio está en `docs/js/music/timing.js`, con pruebas propias.
+- Además de los cambios de acorde, elegir un patrón un poco tarde (hasta una semicorchea después de un paso) hace sonar al momento las notas de ese paso.
+- En pantalla: puntos del pulso sobre la cámara, número grande durante la cuenta previa y el acorde en espera atenuado con «…».
+- Botón 🥁 Metrónomo en la cabecera para encenderlo o apagarlo sin entrar en la configuración.
+
 **Notas de la fase 3**
 - Ritmos: un reloj de semicorcheas marca los pasos. Al cambiar de acorde o de patrón, el ritmo sigue cuadrado con el compás (comportamiento «seguir a tempo»; la opción de reiniciar llega en la fase 4).
 - El bloque sostenido suena con el pad; los patrones rítmicos, con un piano de muestras grabadas (`docs/audio/piano`, 1,6 MB, ver CREDITOS.md). El sonido de teclado sintetizado del principio era demasiado flojo; queda solo como reserva mientras carga el piano. La elección de sonido llega en la fase 6.

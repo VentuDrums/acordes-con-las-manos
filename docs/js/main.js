@@ -10,7 +10,7 @@ import { VolumeFader, palmY } from './hands/fader.js';
 import { HandTracker } from './hands/tracker.js';
 import { AudioEngine } from './audio/engine.js';
 import { drawStage } from './ui/stage.js';
-import { loadSettings, saveSettings } from './settings.js';
+import { loadSettings, saveSettings, currentPattern, currentPatMap } from './settings.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
 import { CalibrationPanel } from './ui/calibration-panel.js';
 
@@ -48,8 +48,16 @@ function soundChord() {
 
 // Lleva al motor de sonido el patrón, el tempo y el volumen de los ajustes.
 function syncEngine() {
-  engine.setPattern(settings.pattern);
-  engine.setTempo(settings.bpm);
+  engine.configure({
+    meter: settings.meter,
+    bpm: settings.bpm,
+    changeMode: settings.changeMode,
+    restartOnChange: settings.restartOnChange,
+    metronome: settings.metronome,
+    metronomeVolume: settings.metronomeVolume,
+    countIn: settings.countIn,
+  });
+  engine.setPattern(currentPattern(settings));
   engine.setVolume(settings.volume);
 }
 
@@ -74,7 +82,8 @@ function applyRight(g) {
   const action = rightAction(settings, g);
   if (!action) return;
   state.rightGesture = g;
-  settings[action.setting] = action.value;
+  if (action.setting === 'pattern') settings.patternByMeter[settings.meter] = action.value;
+  else settings.inversion = action.value;
   saveSettings(settings);
   syncEngine();
   if (action.setting === 'inversion') soundChord();
@@ -170,6 +179,8 @@ function renderChord() {
     $('#chordName').textContent = d.name;
     $('#chordDegree').textContent = d.degree;
   }
+  // Acorde pedido que espera al siguiente pulso o compás (o a que acabe la cuenta previa).
+  $('.chord').classList.toggle('pending', Boolean(state.playing && engine.pending));
   document.querySelectorAll('#legend button').forEach((b) => {
     b.setAttribute('aria-pressed', b.dataset.gesture === state.leftGesture);
   });
@@ -180,16 +191,29 @@ function renderRight() {
   document.querySelectorAll('[data-quick-mode]').forEach((b) => {
     b.setAttribute('aria-pressed', b.dataset.quickMode === settings.rightMode);
   });
+  const patMap = currentPatMap(settings);
+  const pattern = currentPattern(settings);
   $('#rightLegend').innerHTML = ['fist', ...ASSIGNABLE].map((g) => {
     let what = t('faderLabel');
-    if (g !== 'fist') what = inversion ? t(`inversion_${settings.invMap[g]}`) : t(`pattern_${settings.patMap[g]}`);
-    const current = g !== 'fist' && (inversion ? settings.invMap[g] === settings.inversion : settings.patMap[g] === settings.pattern);
+    if (g !== 'fist') what = inversion ? t(`inversion_${settings.invMap[g]}`) : t(`pattern_${patMap[g]}`);
+    const current = g !== 'fist' && (inversion ? settings.invMap[g] === settings.inversion : patMap[g] === pattern);
     return `<li><button data-gesture="${g}" aria-pressed="${g === state.rightGesture && current}">
       <span class="emoji">${GESTURES[g]}</span><span class="label">${t(`gesture_${g}`)}</span><span class="what">${what}</span>
     </button></li>`;
   }).join('');
-  $('#soundInfo').textContent = `${t(`inversion_${settings.inversion}`)} · ${t(`pattern_${settings.pattern}`)}`;
+  $('#soundInfo').textContent = `${settings.meter} · ${settings.bpm} ${t('bpmUnit')} · ${t(`inversion_${settings.inversion}`)} · ${t(`pattern_${pattern}`)}`;
+  $('#metronomeBtn').setAttribute('aria-pressed', settings.metronome);
   renderVolume();
+}
+
+// Puntos del pulso: uno por pulso del compás; durante la cuenta previa, también el número.
+function renderBeat(beat, beats, countingIn) {
+  const box = $('#beats');
+  if (box.children.length !== beats) box.innerHTML = '<span></span>'.repeat(beats);
+  [...box.children].forEach((dot, i) => dot.classList.toggle('on', i === beat));
+  box.classList.toggle('count-in', countingIn);
+  $('#countIn').hidden = !countingIn;
+  $('#countIn').textContent = countingIn ? String(beat + 1) : '';
 }
 
 function renderVolume() {
@@ -257,6 +281,13 @@ initSettingsPanel({
 });
 
 $('#startBtn').addEventListener('click', start);
+$('#metronomeBtn').addEventListener('click', async () => {
+  settings.metronome = !settings.metronome;
+  await engine.start();
+  onSettingsChange();
+});
+engine.onBeat = renderBeat;
+engine.onApplied = renderChord;
 // Cambio rápido de modo de la mano derecha desde la pantalla principal (las tablas se editan en la configuración).
 document.querySelectorAll('[data-quick-mode]').forEach((b) => b.addEventListener('click', () => {
   settings.rightMode = b.dataset.quickMode;

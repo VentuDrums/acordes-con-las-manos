@@ -21,11 +21,11 @@ test('modo inversión: la mano derecha cambia la inversión del acorde que suena
     const { page } = app;
     await page.click('#legend button[data-gesture="one"]'); // Do
     assert.deepEqual((await lastChord(page)).notes, [36, 48, 52, 55]);
-    assert.equal(await text(page, '#soundInfo'), 'Estado fundamental · Bloque sostenido');
+    assert.equal(await text(page, '#soundInfo'), '4/4 · 90 ppm · Estado fundamental · Bloque sostenido');
 
     await page.click('#rightLegend button[data-gesture="two"]'); // 1ª inversión
     assert.deepEqual((await lastChord(page)).notes, [40, 52, 55, 60], 'Do/Mi');
-    assert.equal(await text(page, '#soundInfo'), '1ª inversión · Bloque sostenido');
+    assert.equal(await text(page, '#soundInfo'), '4/4 · 90 ppm · 1ª inversión · Bloque sostenido');
     assert.equal(await page.getAttribute('#rightLegend button[data-gesture="two"]', 'aria-pressed'), 'true');
 
     // La inversión se mantiene al cambiar de acorde con la izquierda.
@@ -95,7 +95,7 @@ test('modo ritmo: el patrón suena a tempo y el cambio de acorde no lo descuadra
     assert.equal(n2, n1, 'en silencio no se disparan notas');
 
     await page.reload();
-    assert.equal(await text(page, '#soundInfo'), 'Estado fundamental · Arpegio ascendente', 'se guarda el patrón');
+    assert.equal(await text(page, '#soundInfo'), '4/4 · 120 ppm · Estado fundamental · Arpegio ascendente', 'se guarda el patrón');
     assert.deepEqual(app.errors, []);
   } finally {
     await app.close();
@@ -114,11 +114,11 @@ test('cambio rápido de modo desde la pantalla principal, con las tablas ya conf
     assert.equal(await page.getAttribute('[data-quick-mode="rhythm"]', 'aria-pressed'), 'true');
     assert.equal(await text(page, '#rightLegend button[data-gesture="two"] .what'), 'Negras');
     await page.click('#rightLegend button[data-gesture="four"]');
-    assert.equal(await text(page, '#soundInfo'), '1ª inversión · Arpegio ascendente', 'la inversión elegida se mantiene');
+    assert.equal(await text(page, '#soundInfo'), '4/4 · 90 ppm · 1ª inversión · Arpegio ascendente', 'la inversión elegida se mantiene');
 
     await page.click('[data-quick-mode="inversion"]');
     assert.equal(await text(page, '#rightLegend button[data-gesture="two"] .what'), '1ª inversión');
-    assert.equal(await text(page, '#soundInfo'), '1ª inversión · Arpegio ascendente', 'el ritmo elegido se mantiene');
+    assert.equal(await text(page, '#soundInfo'), '4/4 · 90 ppm · 1ª inversión · Arpegio ascendente', 'el ritmo elegido se mantiene');
 
     // La configuración refleja el modo elegido desde la pantalla principal.
     await page.click('#settingsBtn');

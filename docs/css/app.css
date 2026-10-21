@@ -27,6 +27,9 @@ header {
   padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
 }
 h1 { margin: 0; font-size: 1.3rem; }
+.header-actions { display: flex; gap: 8px; }
+#metronomeBtn[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); }
+.field-title { margin: 10px 0 6px; color: var(--muted); }
 h2 { margin: 0 0 6px; font-size: 1rem; }
 h3 { margin: 0 0 8px; font-size: 1rem; color: var(--left); }
 
@@ -152,6 +155,19 @@ aside { grid-area: aside; display: grid; gap: 16px; align-content: start; min-wi
 .legend .hint { margin-bottom: 6px; }
 #legend button, #rightLegend button { padding: 3px 10px; min-height: 2.4rem; }
 .legend .emoji { font-size: 1.3rem; }
+
+/* ---------- Pulso, cuenta previa y acorde en espera ---------- */
+.beats { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: none; }
+.beats span { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, 0.25); }
+.beats span:first-child { width: 16px; height: 16px; margin-top: -2px; }
+.beats span.on { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.beats.count-in span.on { background: var(--right); box-shadow: 0 0 10px var(--right); }
+.count-in-number {
+  position: absolute; inset: 0; margin: 0; display: flex; align-items: center; justify-content: center;
+  font-size: clamp(4rem, 18vw, 10rem); font-weight: 800; color: var(--right); opacity: 0.85; pointer-events: none;
+}
+.chord.pending #chordName { opacity: 0.45; }
+.chord.pending #chordName::after { content: ' …'; }
 
 /* ---------- Lo que suena y volumen ---------- */
 .sound-info {

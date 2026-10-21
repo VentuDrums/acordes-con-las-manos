@@ -96,10 +96,11 @@ export function chordName(chord, notation = 'latin', spelling = 'mixed') {
 // Posiciones del acorde que elige la mano derecha en el modo inversión.
 export const INVERSIONS = ['root', 'inv1', 'inv2', 'inv3', 'open', 'octDown', 'octUp'];
 
-// Notas MIDI del acorde: { bass, root, fifth, notes }.
+// Notas MIDI del acorde: { bass, root, third, fifth, notes }.
 // - notes: el acorde, colocado desde la octava 3 según la inversión.
 // - bass: nota del bajo en la octava 2 (la fundamental o, si bassFollows, la nota más grave del acorde).
 // - root: la fundamental en la octava 2, aunque el bajo siga la inversión.
+// - third: la tercera por encima de la fundamental del bajo (para líneas de bajo como el boogie).
 // - fifth: la quinta del acorde en el bajo (para patrones que alternan fundamental y quinta).
 export function voiceChord(chord, inversion = 'root', bassFollows = true) {
   const { intervals } = QUALITIES[chord.quality];
@@ -115,5 +116,12 @@ export function voiceChord(chord, inversion = 'root', bassFollows = true) {
 
   const bassPc = bassFollows && rotations % intervals.length ? notes[0] : chord.root;
   const fifth = intervals.find((i) => i === 7 || i === 6 || i === 8) ?? 7;
-  return { bass: 36 + mod12(bassPc), root: 36 + chord.root, fifth: 36 + mod12(chord.root + fifth), notes };
+  const third = intervals.find((i) => i === 3 || i === 4) ?? intervals[1];
+  return {
+    bass: 36 + mod12(bassPc),
+    root: 36 + chord.root,
+    third: 36 + chord.root + third,
+    fifth: 36 + mod12(chord.root + fifth),
+    notes,
+  };
 }

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { VolumeFader, palmY, FADER_TRAVEL } from '../../docs/js/hands/fader.js';
 import { rightAction } from '../../docs/js/music/right-hand.js';
 import { sanitize } from '../../docs/js/settings.js';
+import { patternsFor } from '../../docs/js/music/patterns.js';
 
 test('fader: cerrar el puño agarra sin cambiar el volumen', () => {
   const f = new VolumeFader(0.5);
@@ -49,15 +50,38 @@ test('mano derecha: en modo inversión cada gesto elige inversión; en modo ritm
   assert.equal(rightAction(s, 'fist'), null);
   s.rightMode = 'rhythm';
   assert.deepEqual(rightAction(s, 'four'), { setting: 'pattern', value: 'arpUp' });
+  s.meter = '6/8';
+  assert.deepEqual(rightAction(s, 'two'), { setting: 'pattern', value: 'pulses68' }, 'usa la tabla del compás elegido');
 });
 
 test('ajustes de la mano derecha: valores no válidos vuelven a los de por defecto', () => {
-  const s = sanitize({ rightMode: 'x', inversion: 'inv2', pattern: 'nope', bpm: 500, volume: 0.3, patMap: { one: 'pop', two: 'x' } });
+  const s = sanitize({ rightMode: 'x', inversion: 'inv2', bpm: 500, volume: 0.3,
+    patternByMeter: { '4/4': 'nope', '3/4': 'waltz34', '6/8': 'pop' }, patMaps: { '4/4': { one: 'pop', two: 'x' } } });
   assert.equal(s.rightMode, 'inversion');
   assert.equal(s.inversion, 'inv2');
-  assert.equal(s.pattern, 'block');
+  assert.equal(s.patternByMeter['4/4'], 'block');
+  assert.equal(s.patternByMeter['3/4'], 'waltz34');
+  assert.equal(s.patternByMeter['6/8'], 'block', 'un patrón de 4/4 no vale en 6/8');
   assert.equal(s.bpm, 90);
   assert.equal(s.volume, 0.3);
-  assert.equal(s.patMap.one, 'pop');
-  assert.equal(s.patMap.two, 'quarters');
+  assert.equal(s.patMaps['4/4'].one, 'pop');
+  assert.equal(s.patMaps['4/4'].two, 'quarters');
+});
+
+test('ajustes de la fase 3 (una sola tabla de patrones) pasan al 4/4 sin perderse', () => {
+  const s = sanitize({ pattern: 'bossa', patMap: { one: 'rock8' } });
+  assert.equal(s.patternByMeter['4/4'], 'bossa');
+  assert.equal(s.patMaps['4/4'].one, 'rock8');
+  assert.equal(s.meter, '4/4');
+  assert.equal(s.changeMode, 'instant');
+  assert.equal(s.metronome, false);
+  assert.equal(s.countIn, false);
+});
+
+test('cada compás tiene una tabla gesto → patrón con patrones de ese compás', () => {
+  const s = sanitize({});
+  for (const [meter, map] of Object.entries(s.patMaps)) {
+    for (const id of Object.values(map)) assert.ok(patternsFor(meter).includes(id), `${meter}: ${id}`);
+  }
+  assert.deepEqual(Object.values(s.patMaps['3/8']).slice(0, 3), ['block', 'waltz38', 'arp38']);
 });

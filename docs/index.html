@@ -11,7 +11,10 @@
 <body>
   <header>
     <h1 data-i18n="title">Acordes con las manos</h1>
-    <button id="settingsBtn" aria-haspopup="dialog">⚙️ <span data-i18n="settings"></span></button>
+    <div class="header-actions">
+      <button id="metronomeBtn" aria-pressed="false">🥁 <span data-i18n="metronome"></span></button>
+      <button id="settingsBtn" aria-haspopup="dialog">⚙️ <span data-i18n="settings"></span></button>
+    </div>
   </header>
 
   <main>
@@ -30,6 +33,8 @@
       </div>
       <p id="calibBanner" class="calib-banner" role="status" hidden></p>
       <p class="sound-info" id="soundInfo"></p>
+      <div class="beats" id="beats" aria-hidden="true"></div>
+      <p class="count-in-number" id="countIn" hidden></p>
       <div class="volume" id="volume" role="meter" aria-valuemin="0" aria-valuemax="100" data-i18n-title="volume">
         <div class="volume-fill" id="volumeFill"></div>
       </div>
@@ -108,6 +113,31 @@
       </div>
     </section>
 
+    <section class="panel">
+      <h3 data-i18n="timeSection"></h3>
+      <div class="fields">
+        <label><span data-i18n="meter"></span> <select id="meterSelect"></select></label>
+        <label><span data-i18n="tempo"></span> <input type="range" id="bpmRange"> <output id="bpmValue"></output></label>
+      </div>
+      <p class="field-title" data-i18n="changeMode"></p>
+      <div class="segmented" role="group">
+        <button data-change-mode="instant" data-i18n="changeInstant"></button>
+        <button data-change-mode="beat" data-i18n="changeBeat"></button>
+        <button data-change-mode="bar" data-i18n="changeBar"></button>
+      </div>
+      <p class="hint" id="changeModeHelp"></p>
+      <p class="field-title" data-i18n="onChange"></p>
+      <div class="segmented" role="group">
+        <button data-restart="false" data-i18n="keepTempo"></button>
+        <button data-restart="true" data-i18n="restartPattern"></button>
+      </div>
+      <div class="fields">
+        <label class="check"><input type="checkbox" id="metronomeCheck"> <span data-i18n="metronomeOn"></span></label>
+        <label><span data-i18n="metronomeVolume"></span> <input type="range" id="metronomeVolumeRange" min="0" max="1" step="0.05"></label>
+        <label class="check"><input type="checkbox" id="countInCheck"> <span data-i18n="countIn"></span></label>
+      </div>
+    </section>
+
     <section class="panel right">
       <h3 data-i18n="rightHandSection"></h3>
       <div class="segmented" role="group">
@@ -119,7 +149,6 @@
         <label><span data-i18n="currentInversion"></span> <select id="inversionSelect"></select></label>
         <label><span data-i18n="currentPattern"></span> <select id="patternSelect"></select></label>
         <label class="check"><input type="checkbox" id="bassFollowsCheck"> <span data-i18n="bassFollows"></span></label>
-        <label><span data-i18n="tempo"></span> <input type="range" id="bpmRange"> <output id="bpmValue"></output></label>
       </div>
       <ul id="rightMapList"></ul>
     </section>

@@ -1,9 +1,21 @@
 // Ajustes de la app: valores por defecto, validación y guardado en el navegador.
 import { SCALES, QUALITIES, INVERSIONS } from './music/theory.js';
-import { PATTERNS } from './music/patterns.js';
+import { PATTERNS, patternsFor } from './music/patterns.js';
+import { METERS } from './music/timing.js';
 import { ASSIGNABLE } from './hands/gestures.js';
 
 const STORAGE_KEY = 'acordes-con-las-manos:ajustes';
+
+// Tabla gesto → patrón por defecto de cada compás: los patrones del compás en orden (y se repiten
+// si hay menos que gestos). En 4/4 se mantiene la de la fase 3.
+const PAT_MAP_44 = {
+  one: 'block', two: 'quarters', three: 'pop', four: 'arpUp', five: 'arpUpDown', shaka: 'alberti', rock: 'offbeat', thumb: 'bossa',
+};
+function defaultPatMap(meter) {
+  if (meter === '4/4') return { ...PAT_MAP_44 };
+  const list = patternsFor(meter);
+  return Object.fromEntries(ASSIGNABLE.map((g, i) => [g, list[i % list.length]]));
+}
 
 export const DEFAULTS = Object.freeze({
   leftMode: 'scale', // 'scale' | 'custom'
@@ -25,24 +37,34 @@ export const DEFAULTS = Object.freeze({
 
   rightMode: 'inversion', // 'inversion' | 'rhythm'
   // Lo que suena ahora: la mano derecha cambia uno de los dos según el modo; el otro queda fijo.
+  // El patrón se guarda por compás.
   inversion: 'root',
-  pattern: 'block',
+  patternByMeter: Object.fromEntries(Object.keys(METERS).map((m) => [m, 'block'])),
   bassFollows: true,
   invMap: {
     one: 'root', two: 'inv1', three: 'inv2', four: 'inv3', five: 'open', shaka: 'octDown', rock: 'octUp', thumb: 'root',
   },
-  patMap: {
-    one: 'block', two: 'quarters', three: 'pop', four: 'arpUp', five: 'arpUpDown', shaka: 'alberti', rock: 'offbeat', thumb: 'bossa',
-  },
+  patMaps: Object.fromEntries(Object.keys(METERS).map((m) => [m, defaultPatMap(m)])),
   bpm: 90,
   volume: 0.8,
+
+  meter: '4/4',
+  changeMode: 'instant', // 'instant' | 'beat' | 'bar'
+  restartOnChange: false,
+  metronome: false,
+  metronomeVolume: 0.6,
+  countIn: false,
 });
+
+export const CHANGE_MODES = ['instant', 'beat', 'bar'];
 
 export const BPM_RANGE = [40, 200];
 
 const isPitch = (n) => Number.isInteger(n) && n >= 0 && n < 12;
 const isInversion = (v) => INVERSIONS.includes(v);
-const isPattern = (v) => Object.hasOwn(PATTERNS, v);
+const isPatternFor = (meter) => (v) => Object.hasOwn(PATTERNS, v) && patternsFor(meter).includes(v);
+const isUnit = (v) => typeof v === 'number' && v >= 0 && v <= 1;
+const isBool = (v) => typeof v === 'boolean';
 const pick = (value, valid, fallback) => (valid(value) ? value : fallback);
 const isChord = (c) => c && isPitch(c.root) && Object.hasOwn(QUALITIES, c.quality);
 
@@ -56,10 +78,16 @@ export function sanitize(saved) {
     custom[g] = isChord(c) ? { root: c.root, quality: c.quality } : { ...DEFAULTS.custom[g] };
   }
   const invMap = {};
-  const patMap = {};
-  for (const g of ASSIGNABLE) {
-    invMap[g] = pick(s.invMap?.[g], isInversion, DEFAULTS.invMap[g]);
-    patMap[g] = pick(s.patMap?.[g], isPattern, DEFAULTS.patMap[g]);
+  for (const g of ASSIGNABLE) invMap[g] = pick(s.invMap?.[g], isInversion, DEFAULTS.invMap[g]);
+  // Versiones anteriores guardaban una sola tabla y un solo patrón (de 4/4): se usan para el 4/4.
+  const savedMaps = { ...s.patMaps, '4/4': s.patMaps?.['4/4'] ?? s.patMap };
+  const savedPatterns = { ...s.patternByMeter, '4/4': s.patternByMeter?.['4/4'] ?? s.pattern };
+  const patMaps = {};
+  const patternByMeter = {};
+  for (const meter of Object.keys(METERS)) {
+    const valid = isPatternFor(meter);
+    patMaps[meter] = Object.fromEntries(ASSIGNABLE.map((g) => [g, pick(savedMaps[meter]?.[g], valid, DEFAULTS.patMaps[meter][g])]));
+    patternByMeter[meter] = pick(savedPatterns[meter], valid, DEFAULTS.patternByMeter[meter]);
   }
   const bpm = Math.round(s.bpm);
   return {
@@ -71,14 +99,24 @@ export function sanitize(saved) {
     swapHands: typeof s.swapHands === 'boolean' ? s.swapHands : DEFAULTS.swapHands,
     rightMode: ['inversion', 'rhythm'].includes(s.rightMode) ? s.rightMode : DEFAULTS.rightMode,
     inversion: pick(s.inversion, isInversion, DEFAULTS.inversion),
-    pattern: pick(s.pattern, isPattern, DEFAULTS.pattern),
-    bassFollows: typeof s.bassFollows === 'boolean' ? s.bassFollows : DEFAULTS.bassFollows,
+    patternByMeter,
+    bassFollows: pick(s.bassFollows, isBool, DEFAULTS.bassFollows),
     invMap,
-    patMap,
+    patMaps,
     bpm: bpm >= BPM_RANGE[0] && bpm <= BPM_RANGE[1] ? bpm : DEFAULTS.bpm,
-    volume: typeof s.volume === 'number' && s.volume >= 0 && s.volume <= 1 ? s.volume : DEFAULTS.volume,
+    volume: pick(s.volume, isUnit, DEFAULTS.volume),
+    meter: pick(s.meter, (v) => Object.hasOwn(METERS, v), DEFAULTS.meter),
+    changeMode: pick(s.changeMode, (v) => CHANGE_MODES.includes(v), DEFAULTS.changeMode),
+    restartOnChange: pick(s.restartOnChange, isBool, DEFAULTS.restartOnChange),
+    metronome: pick(s.metronome, isBool, DEFAULTS.metronome),
+    metronomeVolume: pick(s.metronomeVolume, isUnit, DEFAULTS.metronomeVolume),
+    countIn: pick(s.countIn, isBool, DEFAULTS.countIn),
   };
 }
+
+// Patrón actual y tabla gesto → patrón del compás elegido.
+export const currentPattern = (settings) => settings.patternByMeter[settings.meter];
+export const currentPatMap = (settings) => settings.patMaps[settings.meter];
 
 export function loadSettings() {
   try {

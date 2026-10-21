@@ -46,7 +46,8 @@ test('todas las escalas dan acordes conocidos en todos los grados', () => {
 });
 
 test('notas MIDI: bajo en la octava 2 y acorde desde la octava 3', () => {
-  assert.deepEqual(voiceChord({ root: 0, quality: 'maj' }), { bass: 36, root: 36, fifth: 43, notes: [48, 52, 55] });
+  assert.deepEqual(voiceChord({ root: 0, quality: 'maj' }), { bass: 36, root: 36, third: 40, fifth: 43, notes: [48, 52, 55] });
+  assert.equal(voiceChord({ root: 0, quality: 'min' }).third, 39, 'la tercera de Dom es Mi♭');
   assert.deepEqual(voiceChord({ root: 9, quality: 'min' }).notes, [57, 60, 64]);
   assert.deepEqual(voiceChord({ root: 7, quality: '7' }).notes, [55, 59, 62, 65]);
   assert.deepEqual(voiceChord({ root: 0, quality: '9' }).notes, [48, 52, 55, 58, 62]);
