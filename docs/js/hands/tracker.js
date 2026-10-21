@@ -5,7 +5,9 @@
 // llega mucho más grande al detector de MediaPipe, que reduce la imagen a 192×192 píxeles, y la
 // encuentra aunque esté lejos de la cámara. Las dos zonas se solapan en el centro para no cortar
 // una mano que cruce la línea central.
-import { MEDIAPIPE_URL, HAND_MODEL_URL, HAND_DETECTION_CONFIDENCE } from '../config.js';
+import {
+  MEDIAPIPE_URL, HAND_MODEL_URL, HAND_DETECTION_CONFIDENCE, HAND_PRESENCE_CONFIDENCE, MIN_PALM_SIZE,
+} from '../config.js';
 
 // Ancho de cada zona, en fracción del ancho de la imagen.
 export const REGION_WIDTH = 0.65;
@@ -17,6 +19,13 @@ const SAME_HAND_DISTANCE = 0.05;
 // Pasa los puntos de una zona a coordenadas de la imagen completa.
 export function toFullFrame(landmarks, start, width = REGION_WIDTH) {
   return landmarks.map((p) => ({ ...p, x: start + p.x * width }));
+}
+
+// Tamaño de la palma (muñeca → base del dedo corazón) en fracción del alto de una imagen w × h.
+export function palmSize(landmarks, w, h) {
+  const a = landmarks[0];
+  const b = landmarks[9];
+  return Math.hypot((a.x - b.x) * w, (a.y - b.y) * h) / h;
 }
 
 // Si los dos detectores han encontrado la misma mano (en la zona compartida), se queda solo en el
@@ -46,7 +55,7 @@ export class HandTracker {
       runningMode: 'VIDEO',
       numHands: 1,
       minHandDetectionConfidence: HAND_DETECTION_CONFIDENCE,
-      minHandPresenceConfidence: HAND_DETECTION_CONFIDENCE,
+      minHandPresenceConfidence: HAND_PRESENCE_CONFIDENCE,
     });
     for (const side of ['left', 'right']) {
       try {
@@ -88,8 +97,10 @@ export class HandTracker {
       const sx = Math.round(REGION_START[side] * w);
       canvas.getContext('2d').drawImage(video, sx, 0, rw, h, 0, 0, rw, h);
       const r = this.detectors[side].detectForVideo(canvas, now);
-      hands[side] = r.landmarks.length
-        ? { landmarks: toFullFrame(r.landmarks[0], sx / w, rw / w), world: r.worldLandmarks[0] }
+      const landmarks = r.landmarks.length ? toFullFrame(r.landmarks[0], sx / w, rw / w) : null;
+      // Una «mano» diminuta es casi siempre otra cosa (una oreja, un pliegue de la ropa).
+      hands[side] = landmarks && palmSize(landmarks, w, h) >= MIN_PALM_SIZE
+        ? { landmarks, world: r.worldLandmarks[0] }
         : null;
     }
     const resolved = resolveOverlap(hands);

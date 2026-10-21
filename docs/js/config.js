@@ -8,6 +8,12 @@ export const HAND_MODEL_URL =
 export const GESTURE_HOLD_MS = 150;
 // Tiempo sin ver una mano antes de considerarla fuera de cámara.
 export const HAND_ABSENT_MS = 300;
-// Confianza mínima para dar una mano por encontrada (MediaPipe usa 0,5 por defecto).
-// Con 0,3 encuentra más manos pequeñas o lejanas y, en las pruebas, no ve manos donde no las hay.
+// MediaPipe busca primero algo con forma de palma (detección) y luego confirma que es una mano
+// (presencia). Con 0,3 en la detección encuentra manos pequeñas o lejanas; con 0,7 en la presencia
+// descarta lo que solo se parece a una mano (una oreja, pliegues de la ropa).
 export const HAND_DETECTION_CONFIDENCE = 0.3;
+export const HAND_PRESENCE_CONFIDENCE = 0.7;
+// Tamaño mínimo de la palma (muñeca → base del dedo corazón), en fracción del alto de la imagen.
+// Una mano a 1 m de la tablet mide un 10 % aprox.; con un 4 % se descarta lo que esté a más de 2,5 m
+// y las falsas detecciones diminutas (la oreja detectada como mano medía un 2,6 %).
+export const MIN_PALM_SIZE = 0.04;

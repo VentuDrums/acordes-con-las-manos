@@ -178,6 +178,7 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 **Notas de la fase 2**
 - Configuración en un panel desplegable (botón ⚙️). Los ajustes se guardan en el navegador.
 - En el modo personalizado, el nombre de un acorde cuya nota está en la escala elegida se escribe como en esa tonalidad (Sol♯° en La menor armónica); si no está, con las grafías habituales (Si♭, Re♭, Fa♯…).
+- Falsas detecciones vistas en la tablet (una oreja con auricular y, a veces, la ropa tomadas por una mano): la confirmación de MediaPipe (presencia) sube a 0,7 y se descartan las «manos» con la palma menor que el 4 % del alto de la imagen (una mano real a 1 m mide un 10 %; la oreja, un 2,6 %). En fotos de manos reales casi no se pierden detecciones.
 - La calibración guarda, por cada fotograma, el gesto pedido, el reconocido, las medidas de los dedos y los 21 puntos de la mano.
 
 **Notas de la fase 1 (continuación)**
