@@ -1,0 +1,126 @@
+:root {
+  --bg: #0d0f1a;
+  --panel: #161a2b;
+  --panel-2: #1e2338;
+  --line: #2a3050;
+  --text: #e9ecff;
+  --muted: #9aa3c7;
+  --left: #3ee6ff;
+  --right: #ff5fd8;
+  --accent: #ffd34e;
+  --radius: 14px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.4;
+}
+
+header { padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+h1 { margin: 0; font-size: 1.3rem; }
+h2 { margin: 0 0 6px; font-size: 1rem; }
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid #343b5e;
+  border-radius: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.5; cursor: default; }
+button.primary { background: var(--accent); color: #1a1500; font-weight: 700; border-color: var(--accent); font-size: 1.2rem; padding: 12px 28px; }
+
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  padding: 16px;
+  max-width: 1500px;
+  margin: 0 auto;
+}
+
+/* ---------- Cámara ---------- */
+.stage {
+  position: relative;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  align-self: start;
+}
+#cam { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+#view { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.overlay {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: 24px; text-align: center; color: var(--muted);
+}
+.overlay p { margin: 0; max-width: 32em; }
+
+.chord {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 12px 16px 14px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+  text-align: center;
+  pointer-events: none;
+}
+#chordName {
+  display: block;
+  font-size: clamp(2.2rem, 7vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--left);
+  text-shadow: 0 0 18px rgba(62, 230, 255, 0.5);
+}
+#chordDegree { display: block; min-height: 1.4em; font-size: clamp(1.1rem, 2.5vw, 1.6rem); color: var(--accent); font-weight: 700; }
+
+/* ---------- Lateral ---------- */
+aside { display: grid; gap: 16px; align-content: start; min-width: 0; }
+
+.hands { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hand { background: var(--panel); border-radius: var(--radius); padding: 12px; border-top: 4px solid; min-width: 0; }
+.hand.left { border-color: var(--left); }
+.hand.right { border-color: var(--right); }
+.hand p { margin: 4px 0; font-size: 0.9rem; }
+.hand .fingers { font-size: 1.1rem; letter-spacing: 0.1em; min-height: 1.5em; }
+.hand.left .fingers { color: var(--left); }
+.hand.right .fingers { color: var(--right); }
+
+.legend { background: var(--panel); border-radius: var(--radius); padding: 12px; }
+.legend h2 { color: var(--left); }
+.hint { margin: 0 0 8px; color: var(--muted); font-size: 0.85rem; }
+#legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+#legend button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 2.2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 6px 10px;
+}
+#legend button[aria-pressed='true'] { border-color: var(--accent); background: rgba(255, 211, 78, 0.12); }
+#legend .emoji { font-size: 1.5rem; text-align: center; }
+#legend .label { font-size: 0.9rem; overflow-wrap: anywhere; }
+#legend .what { white-space: nowrap; }
+#legend .what b { color: var(--accent); }
+
+/* Tablet en vertical y móvil: todo en una columna. */
+@media (max-width: 900px) {
+  main { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  aside { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Mientras se ve el panel de inicio, el acorde se ve solo en la tabla (en móvil no cabe todo). */
+.overlay:not([hidden]) ~ .chord { display: none; }

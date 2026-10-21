@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Acordes con las manos</title>
+  <link rel="stylesheet" href="css/app.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <header>
+    <h1 data-i18n="title">Acordes con las manos</h1>
+  </header>
+
+  <main>
+    <section class="stage">
+      <canvas id="view" width="1280" height="720"></canvas>
+      <video id="cam" playsinline muted></video>
+      <div class="overlay" id="startPanel">
+        <p id="intro" data-i18n="intro"></p>
+        <p id="palmTip" data-i18n="palmTip"></p>
+        <button id="startBtn" class="primary" data-i18n="start">Empezar</button>
+        <p id="status" role="status" hidden></p>
+      </div>
+      <div class="chord" aria-live="polite">
+        <span id="chordName">—</span>
+        <span id="chordDegree"></span>
+      </div>
+    </section>
+
+    <aside>
+      <div class="hands">
+        <div class="hand left">
+          <h2 data-i18n="leftHand"></h2>
+          <p id="leftSeen" data-i18n="notSeen"></p>
+          <p class="fingers" id="leftFingers" data-i18n-title="fingersHelp"></p>
+        </div>
+        <div class="hand right">
+          <h2 data-i18n="rightHand"></h2>
+          <p id="rightSeen" data-i18n="notSeen"></p>
+          <p class="fingers" id="rightFingers" data-i18n-title="fingersHelp"></p>
+        </div>
+      </div>
+
+      <section class="legend">
+        <h2 data-i18n="legendTitle"></h2>
+        <p class="hint" data-i18n="legendHint"></p>
+        <ul id="legend"></ul>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>
