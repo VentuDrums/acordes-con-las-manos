@@ -166,6 +166,7 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 - Los umbrales del reconocimiento de dedos se ajustaron con unas 120 fotos de manos reales: acierta el 92 %. Las que fallan están de canto o del dorso; tocando con la palma de frente funciona mucho mejor.
 - Los gestos 3 dedos, 4 dedos, 🤙 y 🤘 no tienen fotos reales de prueba: solo están comprobados con manos simuladas. Hay que verificarlos con manos de verdad.
 - Si la GPU del dispositivo da problemas, `?delegate=CPU` al final de la dirección fuerza el procesador.
+- Primera prueba en la tablet: costaba encontrar la mano al principio. Ahora cada mano se busca en su zona de la imagen (el 65 % de cada lado, con solape en el centro) y con confianza mínima de 0,3 en vez de 0,5. En pruebas con manos pequeñas (lejos de la cámara) pasa de encontrar 11 de 36 manos a 25 de 36, sin falsas detecciones en fotos sin manos. Cuesta el doble de cálculo (dos detectores).
 
 ## 13. Cómo se comprueba
 

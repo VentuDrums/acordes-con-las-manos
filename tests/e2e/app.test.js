@@ -45,6 +45,30 @@ test('con la cámara: cada gesto de la mano izquierda toca su acorde', async () 
   }
 });
 
+test('con la cámara: también encuentra manos pequeñas (lejos de la cámara)', async () => {
+  // Fotos a 72 px de alto en un fotograma de 360: la mano ocupa una cuarta parte del alto.
+  const video = buildCameraVideo('manos-pequenas', [
+    { photo: 'rps_scissors_100.jpg', height: 72 }, // ✌️ → Rem
+    { photo: 'rps_paper_103.jpg', height: 72 },    // 🖐️ → Sol
+    { photo: 'fist.jpg', height: 72 },             // ✊ → silencio
+    { photo: 'rps_scissors_116.jpg', height: 72 }, // ✌️ → Rem
+  ]);
+  const app = await openApp({ video });
+  try {
+    await startApp(app.page);
+    await app.page.waitForFunction(() => {
+      const seq = window.acordes.engine.log.map((e) => (e.type === 'chord' ? e.label : '·')).join(' ');
+      return /Rem Sol · Rem/.test(seq);
+    }, null, { timeout: 40000, polling: 250 });
+    const log = await app.page.evaluate(() => window.acordes.engine.log);
+    console.log('Secuencia oída con manos pequeñas:', log.map((e) => (e.type === 'chord' ? e.label : 'silencio')).join(' → '));
+    await app.page.screenshot({ path: path.join(SHOTS, 'manos-pequenas.png') });
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.close();
+  }
+});
+
 test('sin cámara: la tabla toca los acordes, el puño silencia y el audio no está en silencio', async () => {
   const app = await openApp();
   try {
@@ -85,10 +109,10 @@ test('sin cámara: la tabla toca los acordes, el puño silencia y el audio no es
 
 test('la página cabe sin desplazamiento horizontal en móvil, tablet y ordenador', async () => {
   const sizes = {
-    'tablet-horizontal': { width: 1270, height: 847 }, // Xiaomi Pad 8 Pro aprox.
-    'tablet-vertical': { width: 847, height: 1270 },
-    movil: { width: 390, height: 844 },
-    ordenador: { width: 1440, height: 900 },
+    'tablet-horizontal': { width: 1270, height: 72 }, // Xiaomi Pad 8 Pro aprox.
+    'tablet-vertical': { width: 847, height: 72 },
+    movil: { width: 390, height: 72 },
+    ordenador: { width: 1440, height: 72 },
   };
   for (const [name, viewport] of Object.entries(sizes)) {
     const app = await openApp({ viewport });

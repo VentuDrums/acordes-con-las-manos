@@ -3,7 +3,6 @@ import { GESTURE_HOLD_MS, HAND_ABSENT_MS } from './config.js';
 import { t, translatePage } from './i18n.js';
 import { diatonicChord, romanNumeral, chordName, voiceChord } from './music/theory.js';
 import { GESTURES, ABSENT, fingerStates, classify, GestureFilter } from './hands/gestures.js';
-import { assignHands } from './hands/assign.js';
 import { HandTracker } from './hands/tracker.js';
 import { AudioEngine } from './audio/engine.js';
 import { drawStage } from './ui/stage.js';
@@ -53,10 +52,9 @@ function applyLeft(g) {
 // ---------- Bucle de la cámara ----------
 
 function loop() {
-  const result = tracker.detect();
-  if (result) {
+  const hands = tracker.detect();
+  if (hands) {
     const now = performance.now();
-    const hands = assignHands(result);
     const seen = {};
     for (const side of ['left', 'right']) {
       const hand = hands[side];

@@ -46,9 +46,10 @@ export async function ensurePhotos(rpsPerClass = 20) {
   return rps;
 }
 
-// Vídeo para la cámara simulada. Cada escena es { photo, crop? } (o null para un fondo vacío)
+// Vídeo para la cámara simulada. Cada escena es { photo, crop?, height? } (o null para un fondo vacío)
 // y dura `seconds` segundos. La foto se pone en la mitad derecha de la imagen, que en espejo
-// es la izquierda: la app la toma como mano izquierda.
+// es la izquierda: la app la toma como mano izquierda. `height` es el alto de la foto en píxeles
+// sobre un fotograma de 360 (por defecto 300: mano grande).
 export function buildCameraVideo(name, scenes, seconds = 2) {
   const out = path.join(CACHE, `${name}.mjpeg`);
   if (fs.existsSync(out)) return out;
@@ -59,7 +60,7 @@ export function buildCameraVideo(name, scenes, seconds = 2) {
     else inputs.push('-f', 'lavfi', '-t', String(seconds), '-i', 'color=c=0x404040:s=640x360');
     const crop = scene?.crop ? `crop=${scene.crop},` : '';
     filters.push(scene
-      ? `[${i}:v]${crop}scale=-2:300,pad=640:360:440-iw/2:(360-ih)/2:0x404040,setsar=1,fps=15[v${i}]`
+      ? `[${i}:v]${crop}scale=-2:${scene.height ?? 300},pad=640:360:440-iw/2:(360-ih)/2:0x404040,setsar=1,fps=15[v${i}]`
       : `[${i}:v]fps=15,setsar=1[v${i}]`);
   });
   const concat = scenes.map((_, i) => `[v${i}]`).join('') + `concat=n=${scenes.length}:v=1:a=0,format=yuvj420p[out]`;

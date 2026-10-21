@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fingerStates, classify, GestureFilter, ABSENT } from '../../docs/js/hands/gestures.js';
-import { assignHands } from '../../docs/js/hands/assign.js';
 
 // Mano sintética con la palma hacia la cámara y los dedos hacia arriba (y negativa = arriba).
 // up = [pulgar, índice, corazón, anular, meñique].
@@ -89,21 +88,4 @@ test('filtro: un parpadeo de otro gesto no cambia el acorde', () => {
   f.update('five', 230); // un fotograma suelto
   assert.equal(f.update('one', 260), 'one');
   assert.equal(f.update('one', 600), 'one');
-});
-
-test('manos: con dos manos, la de la derecha de la imagen es la izquierda', () => {
-  const at = (x) => [{ x, y: 0.5, z: 0 }];
-  const r = assignHands({ landmarks: [at(0.2), at(0.8)], worldLandmarks: [] });
-  assert.equal(r.left.landmarks[0].x, 0.8);
-  assert.equal(r.right.landmarks[0].x, 0.2);
-  const swapped = assignHands({ landmarks: [at(0.2), at(0.8)], worldLandmarks: [] }, true);
-  assert.equal(swapped.left.landmarks[0].x, 0.2);
-});
-
-test('manos: con una sola mano decide la mitad de la imagen', () => {
-  const at = (x) => [{ x, y: 0.5, z: 0 }];
-  assert.ok(assignHands({ landmarks: [at(0.7)], worldLandmarks: [] }).left);
-  assert.ok(assignHands({ landmarks: [at(0.3)], worldLandmarks: [] }).right);
-  const none = assignHands({ landmarks: [], worldLandmarks: [] });
-  assert.deepEqual(none, { left: null, right: null });
 });

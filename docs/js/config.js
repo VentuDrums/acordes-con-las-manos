@@ -8,3 +8,6 @@ export const HAND_MODEL_URL =
 export const GESTURE_HOLD_MS = 150;
 // Tiempo sin ver una mano antes de considerarla fuera de cámara.
 export const HAND_ABSENT_MS = 300;
+// Confianza mínima para dar una mano por encontrada (MediaPipe usa 0,5 por defecto).
+// Con 0,3 encuentra más manos pequeñas o lejanas y, en las pruebas, no ve manos donde no las hay.
+export const HAND_DETECTION_CONFIDENCE = 0.3;
