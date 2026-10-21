@@ -2,7 +2,7 @@
 
 Sinte de acompañamiento que se toca con gestos delante de la webcam. Proyecto para el máster de IA aplicada a la educación, abierto a cualquiera que quiera usarlo.
 
-Estado: **fase 2 terminada**, pendiente de que la pruebe el usuario.
+Estado: **fase 3 terminada**, pendiente de que la pruebe el usuario.
 
 ## 1. Objetivo y público
 
@@ -162,8 +162,8 @@ Cada fase termina con algo que se puede probar y enseñar.
    - La mano izquierda toca los grados de Do mayor con un pad.
    - Cambio de acorde al instante.
 2. **Mano izquierda completa:** modo escala con todos sus ajustes, modo personalizado, panel de configuración (con el ajuste para intercambiar las manos) y modo de calibración de gestos.
-3. **Mano derecha:** modos inversión y ritmo, con la tabla editable, y fader de volumen.
-4. **Tiempo:** compases, patrones de fábrica, cuantización, metrónomo y cuenta previa.
+3. **Mano derecha:** modos inversión y ritmo, con la tabla editable, y fader de volumen. Para que el modo ritmo se pueda probar ya, esta fase incluye los patrones de fábrica de 4/4 y el tempo ajustable.
+4. **Tiempo:** el resto de compases y sus patrones, cuantización, metrónomo, cuenta previa y la opción de reiniciar el patrón al cambiar de acorde.
 5. **Editor de patrones.**
 6. **Sonidos:** piano, pad y pluck.
 7. **MIDI:** salida a FL Studio a través de loopMIDI.
@@ -175,6 +175,12 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 **Notas de la fase 1**
 - Los umbrales del reconocimiento de dedos se ajustaron con unas 120 fotos de manos reales: acierta el 92 %. Las que fallan están de canto o del dorso; tocando con la palma de frente funciona mucho mejor.
 - Los gestos 3 dedos, 4 dedos, 🤙 y 🤘 no tienen fotos reales de prueba: solo están comprobados con manos simuladas. Hay que verificarlos con manos de verdad.
+**Notas de la fase 3**
+- Ritmos: un reloj de semicorcheas marca los pasos. Al cambiar de acorde o de patrón, el ritmo sigue cuadrado con el compás (comportamiento «seguir a tempo»; la opción de reiniciar llega en la fase 4).
+- El bloque sostenido suena con el pad; los patrones rítmicos, con un sonido de teclado provisional de ataque rápido. Los sonidos definitivos llegan en la fase 6.
+- Fader: medio alto de la imagen de recorrido va de volumen 0 a máximo. El volumen se guarda.
+- En pantallas anchas la tabla de la mano derecha va debajo de la cámara para que todo quepa sin scroll en la tablet.
+
 **Notas de la fase 2**
 - Configuración en un panel desplegable (botón ⚙️). Los ajustes se guardan en el navegador.
 - En el modo personalizado, el nombre de un acorde cuya nota está en la escala elegida se escribe como en esa tonalidad (Sol♯° en La menor armónica); si no está, con las grafías habituales (Si♭, Re♭, Fa♯…).

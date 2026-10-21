@@ -93,8 +93,27 @@ export function chordName(chord, notation = 'latin', spelling = 'mixed') {
   return noteName(chord.root, notation, spelling) + QUALITIES[chord.quality].suffix;
 }
 
-// Notas MIDI del acorde en estado fundamental: bajo en la octava 2 y acorde desde la octava 3.
-export function voiceChord(chord) {
-  const notes = QUALITIES[chord.quality].intervals.map((i) => 48 + chord.root + i);
-  return { bass: 36 + chord.root, notes };
+// Posiciones del acorde que elige la mano derecha en el modo inversión.
+export const INVERSIONS = ['root', 'inv1', 'inv2', 'inv3', 'open', 'octDown', 'octUp'];
+
+// Notas MIDI del acorde: { bass, root, fifth, notes }.
+// - notes: el acorde, colocado desde la octava 3 según la inversión.
+// - bass: nota del bajo en la octava 2 (la fundamental o, si bassFollows, la nota más grave del acorde).
+// - root: la fundamental en la octava 2, aunque el bajo siga la inversión.
+// - fifth: la quinta del acorde en el bajo (para patrones que alternan fundamental y quinta).
+export function voiceChord(chord, inversion = 'root', bassFollows = true) {
+  const { intervals } = QUALITIES[chord.quality];
+  let notes = intervals.map((i) => 48 + chord.root + i);
+  const rotations = { inv1: 1, inv2: 2, inv3: 3 }[inversion] ?? 0;
+  for (let k = 0; k < rotations % notes.length; k++) notes = [...notes.slice(1), notes[0] + 12];
+  // Posición abierta: la segunda nota sube una octava (Do-Mi-Sol pasa a Do-Sol-Mi).
+  if (inversion === 'open' && notes.length >= 3) notes = [notes[0], ...notes.slice(2), notes[1] + 12];
+  notes.sort((a, b) => a - b);
+  while (notes[0] >= 60) notes = notes.map((n) => n - 12);
+  if (inversion === 'octDown') notes = notes.map((n) => n - 12);
+  if (inversion === 'octUp') notes = notes.map((n) => n + 12);
+
+  const bassPc = bassFollows && rotations % intervals.length ? notes[0] : chord.root;
+  const fifth = intervals.find((i) => i === 7 || i === 6 || i === 8) ?? 7;
+  return { bass: 36 + mod12(bassPc), root: 36 + chord.root, fifth: 36 + mod12(chord.root + fifth), notes };
 }

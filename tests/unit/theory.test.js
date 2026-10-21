@@ -46,8 +46,26 @@ test('todas las escalas dan acordes conocidos en todos los grados', () => {
 });
 
 test('notas MIDI: bajo en la octava 2 y acorde desde la octava 3', () => {
-  assert.deepEqual(voiceChord({ root: 0, quality: 'maj' }), { bass: 36, notes: [48, 52, 55] });
-  assert.deepEqual(voiceChord({ root: 9, quality: 'min' }), { bass: 45, notes: [57, 60, 64] });
-  assert.deepEqual(voiceChord({ root: 7, quality: '7' }), { bass: 43, notes: [55, 59, 62, 65] });
+  assert.deepEqual(voiceChord({ root: 0, quality: 'maj' }), { bass: 36, root: 36, fifth: 43, notes: [48, 52, 55] });
+  assert.deepEqual(voiceChord({ root: 9, quality: 'min' }).notes, [57, 60, 64]);
+  assert.deepEqual(voiceChord({ root: 7, quality: '7' }).notes, [55, 59, 62, 65]);
   assert.deepEqual(voiceChord({ root: 0, quality: '9' }).notes, [48, 52, 55, 58, 62]);
+  assert.equal(voiceChord({ root: 11, quality: 'dim' }).fifth, 41, 'la quinta disminuida de Si es Fa');
+});
+
+test('inversiones de Do mayor (anexo del plan)', () => {
+  const C = { root: 0, quality: 'maj' };
+  const v = (inv, follows = true) => voiceChord(C, inv, follows);
+  assert.deepEqual(v('root').notes, [48, 52, 55]);                      // Do3 Mi3 Sol3
+  assert.deepEqual([v('inv1').bass, ...v('inv1').notes], [40, 52, 55, 60]); // Mi2 · Mi3 Sol3 Do4
+  assert.deepEqual([v('inv2').bass, ...v('inv2').notes], [43, 55, 60, 64]); // Sol2 · Sol3 Do4 Mi4
+  assert.equal(v('inv1', false).bass, 36, 'sin seguir la inversión, el bajo es Do2');
+  assert.deepEqual(v('inv3').notes, [48, 52, 55], 'una tríada no tiene 3ª inversión: vuelve a la fundamental');
+  assert.deepEqual(v('open').notes, [48, 55, 64]);                       // Do3 Sol3 Mi4
+  assert.deepEqual(v('octDown').notes, [36, 40, 43]);
+  assert.deepEqual(v('octUp').notes, [60, 64, 67]);
+  const Cmaj7 = voiceChord({ root: 0, quality: 'maj7' }, 'inv3');
+  assert.deepEqual([Cmaj7.bass, ...Cmaj7.notes], [47, 59, 60, 64, 67]); // Si2 · Si3 Do4 Mi4 Sol4
+  const G = voiceChord({ root: 7, quality: 'maj' }, 'inv2');
+  assert.deepEqual([G.bass, ...G.notes], [38, 50, 55, 59], 'Sol/Re: se baja de octava para no irse al agudo');
 });

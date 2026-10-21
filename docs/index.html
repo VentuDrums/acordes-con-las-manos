@@ -29,6 +29,10 @@
         <span id="chordDegree"></span>
       </div>
       <p id="calibBanner" class="calib-banner" role="status" hidden></p>
+      <p class="sound-info" id="soundInfo"></p>
+      <div class="volume" id="volume" role="meter" aria-valuemin="0" aria-valuemax="100" data-i18n-title="volume">
+        <div class="volume-fill" id="volumeFill"></div>
+      </div>
     </section>
 
     <aside>
@@ -66,6 +70,12 @@
         </div>
       </section>
     </aside>
+
+    <section class="panel legend right" id="rightLegendPanel">
+      <h2 id="rightLegendTitle"></h2>
+      <p class="hint" data-i18n="rightLegendHint"></p>
+      <ul id="rightLegend"></ul>
+    </section>
   </main>
 
   <dialog id="settingsDialog" aria-labelledby="settingsTitle">
@@ -90,6 +100,22 @@
         <button id="fillFromScaleBtn" data-i18n="fillFromScale"></button>
         <ul id="customList"></ul>
       </div>
+    </section>
+
+    <section class="panel right">
+      <h3 data-i18n="rightHandSection"></h3>
+      <div class="segmented" role="group">
+        <button data-right-mode="inversion" data-i18n="modeInversion"></button>
+        <button data-right-mode="rhythm" data-i18n="modeRhythm"></button>
+      </div>
+      <p class="hint" id="rightModeHelp"></p>
+      <div class="fields">
+        <label><span data-i18n="currentInversion"></span> <select id="inversionSelect"></select></label>
+        <label><span data-i18n="currentPattern"></span> <select id="patternSelect"></select></label>
+        <label class="check"><input type="checkbox" id="bassFollowsCheck"> <span data-i18n="bassFollows"></span></label>
+        <label><span data-i18n="tempo"></span> <input type="range" id="bpmRange"> <output id="bpmValue"></output></label>
+      </div>
+      <ul id="rightMapList"></ul>
     </section>
 
     <section class="panel">

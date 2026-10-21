@@ -63,6 +63,8 @@ input[type='checkbox'] { width: 1.2rem; height: 1.2rem; accent-color: var(--acce
 main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-areas: 'stage aside' 'right aside';
+  grid-template-rows: auto 1fr;
   gap: 16px;
   padding: 16px;
   max-width: 1500px;
@@ -71,6 +73,7 @@ main {
 
 /* ---------- Cámara ---------- */
 .stage {
+  grid-area: stage;
   position: relative;
   background: #000;
   border-radius: var(--radius);
@@ -106,7 +109,11 @@ main {
 #chordDegree { display: block; min-height: 1.4em; font-size: clamp(1.1rem, 2.5vw, 1.6rem); color: var(--accent); font-weight: 700; }
 
 /* ---------- Lateral ---------- */
-aside { display: grid; gap: 16px; align-content: start; min-width: 0; }
+aside { grid-area: aside; display: grid; gap: 16px; align-content: start; min-width: 0; }
+#rightLegendPanel { grid-area: right; align-self: start; min-width: 0; }
+@media (min-width: 901px) {
+  #rightLegend { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 
 .hands { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .hand { background: var(--panel); border-radius: var(--radius); padding: 12px; border-top: 4px solid; min-width: 0; }
@@ -119,8 +126,8 @@ aside { display: grid; gap: 16px; align-content: start; min-width: 0; }
 
 .legend h2, .calib h2 { color: var(--left); }
 .hint { margin: 0 0 8px; color: var(--muted); font-size: 0.85rem; }
-#legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
-#legend button {
+#legend, #rightLegend { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+#legend button, #rightLegend button {
   width: 100%;
   display: grid;
   grid-template-columns: 2.2rem minmax(0, 1fr) auto;
@@ -129,11 +136,36 @@ aside { display: grid; gap: 16px; align-content: start; min-width: 0; }
   text-align: left;
   padding: 6px 10px;
 }
-#legend button[aria-pressed='true'] { border-color: var(--accent); background: rgba(255, 211, 78, 0.12); }
-#legend .emoji { font-size: 1.5rem; text-align: center; }
-#legend .label { font-size: 0.9rem; overflow-wrap: anywhere; }
-#legend .what { white-space: nowrap; }
-#legend .what b { color: var(--accent); }
+#legend button[aria-pressed='true'], #rightLegend button[aria-pressed='true'] { border-color: var(--accent); background: rgba(255, 211, 78, 0.12); }
+.legend .emoji { font-size: 1.5rem; text-align: center; }
+.legend .label { font-size: 0.9rem; overflow-wrap: anywhere; }
+.legend .what { white-space: nowrap; }
+.legend .what b { color: var(--accent); }
+.legend.right h2, .panel.right h3 { color: var(--right); }
+#rightLegend button { grid-template-columns: 2.2rem minmax(0, 1fr); }
+#rightLegend .label { display: none; }
+#rightLegend .what { white-space: normal; text-align: left; font-size: 0.9rem; }
+/* Tablas compactas para que quepan las dos en la tablet en horizontal. */
+.legend .hint { margin-bottom: 6px; }
+#legend button, #rightLegend button { padding: 3px 10px; min-height: 2.4rem; }
+.legend .emoji { font-size: 1.3rem; }
+
+/* ---------- Lo que suena y volumen ---------- */
+.sound-info {
+  position: absolute; top: 10px; left: 12px; margin: 0; padding: 4px 10px; border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55); color: var(--right); font-size: 0.9rem; pointer-events: none;
+}
+.volume {
+  position: absolute; top: 12px; bottom: 12px; right: 12px; width: 12px;
+  border-radius: 999px; background: rgba(0, 0, 0, 0.5); overflow: hidden; opacity: 0.6;
+  transition: opacity 0.2s, width 0.2s;
+}
+.volume.grabbing { opacity: 1; width: 22px; outline: 2px solid var(--right); }
+.volume-fill { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(var(--right), var(--accent)); }
+#rightMapList { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+#rightMapList li { display: grid; grid-template-columns: 2.2rem minmax(0, 1fr) minmax(0, 1.3fr); align-items: center; gap: 8px; }
+#rightMapList .emoji { font-size: 1.5rem; text-align: center; }
+input[type='range'] { accent-color: var(--accent); max-width: 100%; }
 
 /* ---------- Calibración ---------- */
 .calib-banner {
@@ -172,17 +204,19 @@ dialog .panel { margin-top: 12px; }
 
 /* Tablet en vertical y móvil: todo en una columna. */
 @media (max-width: 900px) {
-  main { grid-template-columns: minmax(0, 1fr); padding: 12px; }
+  main { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'stage' 'aside' 'right'; padding: 12px; }
   aside { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 600px) {
   #customList li { grid-template-columns: 1.8rem minmax(0, 0.8fr) minmax(0, 1.2fr) 4rem; gap: 6px; }
   #customList .label { display: none; }
   #customList select { padding: 6px; }
+  #rightMapList li { grid-template-columns: 1.8rem minmax(0, 1fr); }
+  #rightMapList .label { display: none; }
 }
 
 /* Durante la calibración no suena nada: se oculta el acorde para que no tape la mano. */
-body.calibrating .chord { display: none; }
+body.calibrating .chord, body.calibrating .sound-info { display: none; }
 
 /* Mientras se ve el panel de inicio, el acorde se ve solo en la tabla (en móvil no cabe todo). */
 .overlay:not([hidden]) ~ .chord { display: none; }

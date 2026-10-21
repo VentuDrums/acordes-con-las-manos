@@ -97,7 +97,7 @@ test('sin cámara: la tabla toca los acordes, el puño silencia y el audio no es
     await page.click('#legend button[data-gesture="fist"]');
     assert.equal(await page.textContent('#chordName'), 'Silencio');
     await page.waitForTimeout(3500); // release del pad (1,2 s) + cola de la reverb
-    assert.equal(await page.evaluate(() => window.acordes.engine.synth.activeVoices), 0, 'quedan voces sonando');
+    assert.equal(await page.evaluate(() => window.acordes.engine.pad.activeVoices + window.acordes.engine.keys.activeVoices), 0, 'quedan voces sonando');
     const quiet = await page.evaluate(() => window.__meter.getValue());
     console.log('Nivel de salida tras el puño:', quiet === -Infinity ? '-∞' : quiet.toFixed(1), 'dB');
     assert.ok(quiet < -50, `sigue sonando: ${quiet}`);

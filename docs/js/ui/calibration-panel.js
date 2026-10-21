@@ -38,6 +38,7 @@ export class CalibrationPanel {
     this.active = true;
     document.body.classList.add('calibrating');
     $('#legendPanel').hidden = true;
+    $('#rightLegendPanel').hidden = true;
     $('#calibPanel').hidden = false;
     this.onEnter();
     this.render();
@@ -50,6 +51,7 @@ export class CalibrationPanel {
     $('#calibBanner').hidden = true;
     $('#calibPanel').hidden = true;
     $('#legendPanel').hidden = false;
+    $('#rightLegendPanel').hidden = false;
     this.onExit();
   }
 

@@ -1,6 +1,8 @@
 // Panel de configuración (diálogo desplegable).
 import { t } from '../i18n.js';
-import { SCALES, QUALITIES, NOTE_NAMES, chordName } from '../music/theory.js';
+import { SCALES, QUALITIES, NOTE_NAMES, INVERSIONS, chordName } from '../music/theory.js';
+import { PATTERNS } from '../music/patterns.js';
+import { BPM_RANGE } from '../settings.js';
 import { customFromScale, spellingForChord } from '../music/left-hand.js';
 import { GESTURES, ASSIGNABLE } from '../hands/gestures.js';
 
@@ -34,6 +36,29 @@ export function initSettingsPanel({ settings, notation, onChange, onCalibrate })
     $('#customEditor').hidden = !custom;
     $('#swapHandsCheck').checked = settings.swapHands;
     if (custom) renderCustom();
+    renderRight();
+  }
+
+  const inversionOptions = (selected) => options(INVERSIONS.map((id) => [id, t(`inversion_${id}`)]), selected);
+  const patternOptions = (selected) => options(Object.keys(PATTERNS).map((id) => [id, t(`pattern_${id}`)]), selected);
+
+  function renderRight() {
+    const inversion = settings.rightMode === 'inversion';
+    document.querySelectorAll('[data-right-mode]').forEach((b) => {
+      b.setAttribute('aria-pressed', b.dataset.rightMode === settings.rightMode);
+    });
+    $('#rightModeHelp').textContent = t(inversion ? 'modeInversionHelp' : 'modeRhythmHelp');
+    $('#inversionSelect').innerHTML = inversionOptions(settings.inversion);
+    $('#patternSelect').innerHTML = patternOptions(settings.pattern);
+    $('#bassFollowsCheck').checked = settings.bassFollows;
+    Object.assign($('#bpmRange'), { min: BPM_RANGE[0], max: BPM_RANGE[1], step: 1, value: settings.bpm });
+    $('#bpmValue').textContent = `${settings.bpm} ${t('bpmUnit')}`;
+    $('#rightMapList').innerHTML = ASSIGNABLE.map((g) => `<li>
+        <span class="emoji" aria-hidden="true">${GESTURES[g]}</span>
+        <span class="label">${t(`gesture_${g}`)}</span>
+        <select data-right-map="${g}" aria-label="${t('gestureAction', { gesture: t(`gesture_${g}`) })}">${
+          inversion ? inversionOptions(settings.invMap[g]) : patternOptions(settings.patMap[g])}</select>
+      </li>`).join('');
   }
 
   function renderCustom() {
@@ -75,6 +100,24 @@ export function initSettingsPanel({ settings, notation, onChange, onCalibrate })
     const { root, quality } = e.target.dataset;
     if (root) settings.custom[root] = { ...settings.custom[root], root: Number(e.target.value) };
     if (quality) settings.custom[quality] = { ...settings.custom[quality], quality: e.target.value };
+    changed();
+  });
+  document.querySelectorAll('[data-right-mode]').forEach((b) => b.addEventListener('click', () => {
+    settings.rightMode = b.dataset.rightMode;
+    changed();
+  }));
+  $('#inversionSelect').addEventListener('change', (e) => { settings.inversion = e.target.value; changed(); });
+  $('#patternSelect').addEventListener('change', (e) => { settings.pattern = e.target.value; changed(); });
+  $('#bassFollowsCheck').addEventListener('change', (e) => { settings.bassFollows = e.target.checked; changed(); });
+  $('#bpmRange').addEventListener('input', (e) => {
+    settings.bpm = Number(e.target.value);
+    $('#bpmValue').textContent = `${settings.bpm} ${t('bpmUnit')}`;
+    onChange();
+  });
+  $('#rightMapList').addEventListener('change', (e) => {
+    const g = e.target.dataset.rightMap;
+    if (!g) return;
+    (settings.rightMode === 'inversion' ? settings.invMap : settings.patMap)[g] = e.target.value;
     changed();
   });
   $('#calibrateBtn').addEventListener('click', () => {

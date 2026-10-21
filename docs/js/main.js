@@ -1,9 +1,12 @@
-// Fase 2: la mano izquierda elige el acorde (por escala o a tu gusto), con configuración y calibración.
+// La mano izquierda elige el acorde (por escala o a tu gusto) y la derecha cómo suena (inversión o ritmo)
+// y el volumen (puño + subir o bajar). Con configuración y calibración de gestos.
 import { GESTURE_HOLD_MS, HAND_ABSENT_MS } from './config.js';
 import { t, translatePage } from './i18n.js';
 import { voiceChord, noteName } from './music/theory.js';
 import { chordForGesture, describe, spellingFor } from './music/left-hand.js';
-import { GESTURES, ABSENT, fingerStates, classify, GestureFilter } from './hands/gestures.js';
+import { rightAction } from './music/right-hand.js';
+import { GESTURES, ASSIGNABLE, ABSENT, fingerStates, classify, GestureFilter } from './hands/gestures.js';
+import { VolumeFader, palmY } from './hands/fader.js';
 import { HandTracker } from './hands/tracker.js';
 import { AudioEngine } from './audio/engine.js';
 import { drawStage } from './ui/stage.js';
@@ -27,32 +30,64 @@ const lastStable = { left: ABSENT, right: ABSENT };
 const state = {
   started: false,
   delegate: null,
-  leftGesture: ABSENT, // último gesto aplicado de la mano izquierda
-  playing: null,       // { chord, degree } que suena, o null en silencio
+  leftGesture: ABSENT,  // último gesto aplicado de la mano izquierda
+  rightGesture: null,   // último gesto aplicado de la mano derecha
+  playing: null,        // { chord, degree } que suena, o null en silencio
 };
+const fader = new VolumeFader(settings.volume);
+
+// Lleva al motor de sonido el acorde actual con la inversión actual (o el silencio).
+function soundChord() {
+  if (!state.playing) {
+    engine.silence();
+    return;
+  }
+  const voicing = voiceChord(state.playing.chord, settings.inversion, settings.bassFollows);
+  engine.setChord(voicing, describe(settings, state.playing, NOTATION).name);
+}
+
+// Lleva al motor de sonido el patrón, el tempo y el volumen de los ajustes.
+function syncEngine() {
+  engine.setPattern(settings.pattern);
+  engine.setTempo(settings.bpm);
+  engine.setVolume(settings.volume);
+}
 
 function applyLeft(g) {
   if (calibration.active) return;
   if (g === 'fist' || g === ABSENT) {
     state.leftGesture = g;
     state.playing = null;
-    engine.silence();
   } else {
     const next = chordForGesture(settings, g);
     if (!next) return; // gesto sin acorde: sigue sonando lo que había
     state.leftGesture = g;
     state.playing = next;
-    const v = voiceChord(next.chord);
-    engine.playChord([v.bass, ...v.notes], describe(settings, next, NOTATION).name);
   }
+  soundChord();
   renderChord();
+}
+
+// El puño derecho (fader) y la mano fuera de cámara no cambian la inversión ni el ritmo.
+function applyRight(g) {
+  if (calibration.active || g === 'fist' || g === ABSENT) return;
+  const action = rightAction(settings, g);
+  if (!action) return;
+  state.rightGesture = g;
+  settings[action.setting] = action.value;
+  saveSettings(settings);
+  syncEngine();
+  if (action.setting === 'inversion') soundChord();
+  renderRight();
 }
 
 // Al cambiar los ajustes, el gesto que se está haciendo pasa a tocar su acorde nuevo.
 function onSettingsChange() {
   saveSettings(settings);
   tracker.swap = settings.swapHands;
+  syncEngine();
   renderLegend();
+  renderRight();
   if (state.playing && state.leftGesture !== ABSENT) applyLeft(state.leftGesture);
   else renderChord();
 }
@@ -71,14 +106,26 @@ function loop() {
       const stable = filters[side].update(hand ? seen[side] : ABSENT, now);
       if (stable !== lastStable[side]) {
         lastStable[side] = stable;
-        if (side === 'left') applyLeft(stable);
+        (side === 'left' ? applyLeft : applyRight)(stable);
       }
       renderHand(side, hand, fingers, seen[side]);
     }
+    updateFader(hands.right);
     calibration.onFrame(hands, now);
     drawStage($('#view'), tracker.video, hands, seen);
   }
   requestAnimationFrame(loop);
+}
+
+function updateFader(hand) {
+  const wasGrabbing = fader.grabbing;
+  const gesture = calibration.active ? null : lastStable.right;
+  if (fader.update(gesture, hand ? palmY(hand.landmarks) : null)) {
+    settings.volume = fader.volume;
+    engine.setVolume(settings.volume);
+  }
+  if (wasGrabbing && !fader.grabbing) saveSettings(settings);
+  renderVolume();
 }
 
 async function start() {
@@ -88,6 +135,7 @@ async function start() {
   $('#intro').hidden = true;
   $('#palmTip').hidden = true;
   await engine.start();
+  syncEngine();
   renderChord();
   try {
     setStatus(t('loadingModel'));
@@ -125,6 +173,28 @@ function renderChord() {
   document.querySelectorAll('#legend button').forEach((b) => {
     b.setAttribute('aria-pressed', b.dataset.gesture === state.leftGesture);
   });
+}
+
+function renderRight() {
+  const inversion = settings.rightMode === 'inversion';
+  $('#rightLegendTitle').textContent = t(inversion ? 'rightLegendInversion' : 'rightLegendRhythm');
+  $('#rightLegend').innerHTML = ['fist', ...ASSIGNABLE].map((g) => {
+    let what = t('faderLabel');
+    if (g !== 'fist') what = inversion ? t(`inversion_${settings.invMap[g]}`) : t(`pattern_${settings.patMap[g]}`);
+    const current = g !== 'fist' && (inversion ? settings.invMap[g] === settings.inversion : settings.patMap[g] === settings.pattern);
+    return `<li><button data-gesture="${g}" aria-pressed="${g === state.rightGesture && current}">
+      <span class="emoji">${GESTURES[g]}</span><span class="label">${t(`gesture_${g}`)}</span><span class="what">${what}</span>
+    </button></li>`;
+  }).join('');
+  $('#soundInfo').textContent = `${t(`inversion_${settings.inversion}`)} · ${t(`pattern_${settings.pattern}`)}`;
+  renderVolume();
+}
+
+function renderVolume() {
+  const percent = Math.round(settings.volume * 100);
+  $('#volumeFill').style.height = `${percent}%`;
+  $('#volume').classList.toggle('grabbing', fader.grabbing);
+  $('#volume').setAttribute('aria-valuenow', percent);
 }
 
 function renderHand(side, hand, fingers, gesture) {
@@ -185,15 +255,24 @@ initSettingsPanel({
 });
 
 $('#startBtn').addEventListener('click', start);
+$('#rightLegend').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-gesture]');
+  if (!btn) return;
+  await engine.start();
+  syncEngine();
+  applyRight(btn.dataset.gesture);
+});
 $('#legend').addEventListener('click', async (e) => {
   const btn = e.target.closest('button[data-gesture]');
   if (!btn) return;
   await engine.start();
+  syncEngine();
   applyLeft(btn.dataset.gesture);
 });
 
 translatePage();
 renderLegend();
+renderRight();
 
 // Acceso para depurar y para los tests automáticos.
-window.acordes = { engine, state, filters, settings, calibration };
+window.acordes = { engine, state, filters, settings, calibration, fader };
