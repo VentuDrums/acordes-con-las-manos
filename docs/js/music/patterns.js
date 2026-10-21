@@ -154,7 +154,13 @@ export const PATTERNS = {
   },
 };
 
-// Patrones que se pueden usar en un compás (el bloque sostenido vale en todos).
+// Patrones propios (editor): se añaden a PATTERNS. Cada llamada sustituye a los anteriores.
+export function registerPatterns(custom) {
+  for (const id of Object.keys(PATTERNS)) if (PATTERNS[id].custom) delete PATTERNS[id];
+  Object.assign(PATTERNS, custom);
+}
+
+// Patrones que se pueden usar en un compás (el bloque sostenido vale en todos; los propios, al final).
 export const patternsFor = (meter) => Object.keys(PATTERNS).filter((id) => PATTERNS[id].meter === null || PATTERNS[id].meter === meter);
 
 // Notas MIDI de un evento con el acorde dado.

@@ -158,6 +158,7 @@
         <label class="check"><input type="checkbox" id="bassFollowsCheck"> <span data-i18n="bassFollows"></span></label>
       </div>
       <ul id="rightMapList"></ul>
+      <button id="openEditorBtn" class="primary-soft">🎛️ <span data-i18n="patternEditor"></span></button>
     </section>
 
     <section class="panel">
@@ -170,6 +171,43 @@
       <p class="hint" data-i18n="calibrationHelp"></p>
       <button id="calibrateBtn" data-i18n="calibrate"></button>
     </section>
+  </dialog>
+  <dialog id="editorDialog" class="editor" aria-labelledby="editorTitle">
+    <form method="dialog" class="dialog-head">
+      <h2 id="editorTitle" data-i18n="patternEditor"></h2>
+      <button value="close" data-i18n="close"></button>
+    </form>
+    <div class="fields">
+      <label><span data-i18n="meter"></span> <select id="edMeter"></select></label>
+      <label><span data-i18n="pattern"></span> <select id="edPattern"></select></label>
+    </div>
+    <div class="row">
+      <button id="edNew" data-i18n="newPattern"></button>
+      <button id="edDuplicate" data-i18n="duplicatePattern"></button>
+      <button id="edDelete" data-i18n="deletePattern"></button>
+    </div>
+    <p class="hint" id="edReadonlyHint" data-i18n="readonlyHint"></p>
+    <div id="edOptions">
+      <div class="fields">
+        <label><span data-i18n="patternName"></span> <input id="edName" maxlength="40"></label>
+      </div>
+      <div class="row">
+        <div class="segmented" role="group">
+          <button data-ed-dynamics="false" data-i18n="noDynamics"></button>
+          <button data-ed-dynamics="true" data-i18n="withDynamics"></button>
+        </div>
+        <div class="segmented" role="group">
+          <button data-ed-legato="false" data-i18n="staccato"></button>
+          <button data-ed-legato="true" data-i18n="legato"></button>
+        </div>
+      </div>
+      <p class="hint" data-i18n="gridHelp"></p>
+    </div>
+    <div class="grid-wrap"><table id="edGrid"></table></div>
+    <div class="row">
+      <label><span data-i18n="listenWith"></span> <select id="edChord"></select></label>
+      <button id="edPlay" class="primary-soft"></button>
+    </div>
   </dialog>
 </body>
 </html>

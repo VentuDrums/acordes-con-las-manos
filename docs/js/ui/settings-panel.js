@@ -2,6 +2,7 @@
 import { t } from '../i18n.js';
 import { SCALES, QUALITIES, NOTE_NAMES, INVERSIONS, chordName } from '../music/theory.js';
 import { patternsFor } from '../music/patterns.js';
+import { patternLabel } from '../music/custom-patterns.js';
 import { METERS } from '../music/timing.js';
 import { BPM_RANGE, currentPattern, currentPatMap } from '../settings.js';
 import { customFromScale, spellingForChord } from '../music/left-hand.js';
@@ -65,7 +66,8 @@ export function initSettingsPanel({ settings, notation, onChange, onCalibrate })
   }
 
   const inversionOptions = (selected) => options(INVERSIONS.map((id) => [id, t(`inversion_${id}`)]), selected);
-  const patternOptions = (selected) => options(patternsFor(settings.meter).map((id) => [id, t(`pattern_${id}`)]), selected);
+  const escapeHtml = (text) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+  const patternOptions = (selected) => options(patternsFor(settings.meter).map((id) => [id, escapeHtml(patternLabel(id, t))]), selected);
 
   function renderRight() {
     const inversion = settings.rightMode === 'inversion';

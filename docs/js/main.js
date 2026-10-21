@@ -13,11 +13,17 @@ import { drawStage } from './ui/stage.js';
 import { loadSettings, saveSettings, currentPattern, currentPatMap, engineTiming } from './settings.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
 import { CalibrationPanel } from './ui/calibration-panel.js';
+import { initPatternEditor } from './ui/pattern-editor.js';
+import { loadPatterns, patternLabel } from './music/custom-patterns.js';
 
 const LEGEND_ORDER = ['fist', 'one', 'two', 'three', 'four', 'five', 'shaka', 'rock', 'thumb'];
 const NOTATION = 'latin';
 
 const $ = (sel) => document.querySelector(sel);
+// Los nombres de los patrones propios los escribe el usuario: se escapan antes de meterlos en HTML.
+const escapeHtml = (text) => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+// Los patrones propios se registran antes de leer los ajustes, que los pueden usar.
+const customPatterns = loadPatterns();
 const settings = loadSettings();
 const engine = new AudioEngine();
 const tracker = new HandTracker();
@@ -53,8 +59,11 @@ function syncEngine() {
   engine.setVolume(settings.volume);
 }
 
+// Mientras se calibra o se edita un patrón, los gestos no cambian lo que suena.
+const handsPaused = () => calibration.active || $('#editorDialog').open;
+
 function applyLeft(g) {
-  if (calibration.active) return;
+  if (handsPaused()) return;
   if (g === 'fist' || g === ABSENT) {
     state.leftGesture = g;
     state.playing = null;
@@ -70,7 +79,7 @@ function applyLeft(g) {
 
 // El puño derecho (fader) y la mano fuera de cámara no cambian la inversión ni el ritmo.
 function applyRight(g) {
-  if (calibration.active || g === 'fist' || g === ABSENT) return;
+  if (handsPaused() || g === 'fist' || g === ABSENT) return;
   const action = rightAction(settings, g);
   if (!action) return;
   state.rightGesture = g;
@@ -187,13 +196,13 @@ function renderRight() {
   const pattern = currentPattern(settings);
   $('#rightLegend').innerHTML = ['fist', ...ASSIGNABLE].map((g) => {
     let what = t('faderLabel');
-    if (g !== 'fist') what = inversion ? t(`inversion_${settings.invMap[g]}`) : t(`pattern_${patMap[g]}`);
+    if (g !== 'fist') what = inversion ? t(`inversion_${settings.invMap[g]}`) : escapeHtml(patternLabel(patMap[g], t));
     const current = g !== 'fist' && (inversion ? settings.invMap[g] === settings.inversion : patMap[g] === pattern);
     return `<li><button data-gesture="${g}" aria-pressed="${g === state.rightGesture && current}">
       <span class="emoji">${GESTURES[g]}</span><span class="label">${t(`gesture_${g}`)}</span><span class="what">${what}</span>
     </button></li>`;
   }).join('');
-  $('#soundInfo').textContent = `${settings.meter} · ${settings.bpm} ${t('bpmUnit')} · ${t(`inversion_${settings.inversion}`)} · ${t(`pattern_${pattern}`)}`;
+  $('#soundInfo').textContent = `${settings.meter} · ${settings.bpm} ${t('bpmUnit')} · ${t(`inversion_${settings.inversion}`)} · ${patternLabel(pattern, t)}`;
   const withMetronome = settings.timeMode === 'metronome';
   $('#metronomeBtn').setAttribute('aria-pressed', withMetronome);
   $('#metronomeBtn').innerHTML = `<span aria-hidden="true">${withMetronome ? '🥁' : '🎶'}</span> `
@@ -277,6 +286,28 @@ initSettingsPanel({
   },
 });
 
+const editor = initPatternEditor({
+  settings,
+  patterns: customPatterns,
+  onChange: onSettingsChange,
+  preview: async (id, chord) => {
+    await engine.start();
+    syncEngine();
+    engine.setPattern(id);
+    engine.playNow(voiceChord(chord, settings.inversion, settings.bassFollows), chord.name);
+  },
+  // Al dejar de escuchar vuelve lo que tocaban las manos.
+  stopPreview: () => {
+    engine.silence();
+    syncEngine();
+    soundChord();
+  },
+});
+$('#openEditorBtn').addEventListener('click', () => {
+  $('#settingsDialog').close();
+  editor.open();
+});
+
 $('#startBtn').addEventListener('click', start);
 $('#metronomeBtn').addEventListener('click', async () => {
   settings.timeMode = settings.timeMode === 'free' ? 'metronome' : 'free';
@@ -311,4 +342,4 @@ renderLegend();
 renderRight();
 
 // Acceso para depurar y para los tests automáticos.
-window.acordes = { engine, state, filters, settings, calibration, fader };
+window.acordes = { engine, state, filters, settings, calibration, fader, customPatterns };

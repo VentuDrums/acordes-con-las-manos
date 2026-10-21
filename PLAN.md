@@ -2,7 +2,7 @@
 
 Sinte de acompañamiento que se toca con gestos delante de la webcam. Proyecto para el máster de IA aplicada a la educación, abierto a cualquiera que quiera usarlo.
 
-Estado: **fase 4 terminada**, pendiente de que la pruebe el usuario.
+Estado: **fase 5 terminada**, pendiente de que la pruebe el usuario.
 
 ## 1. Objetivo y público
 
@@ -121,7 +121,7 @@ El detalle de las notas de cada patrón está en el anexo A.
 - **Fábrica y propios:** los patrones de fábrica no se modifican. Con «Duplicar y editar» o «Nuevo patrón» se crea un patrón propio, que aparece en la lista de su compás y se puede asignar a un gesto. Los patrones propios se guardan en el navegador.
 - **Rejilla tipo step sequencer:**
   - Columnas: subdivisiones del compás. Semicorcheas en 2/4, 3/4 y 4/4; corcheas en 3/8, 6/8, 9/8 y 12/8.
-  - Filas del acorde: Acorde completo y Nota 1 a Nota 5 del arpegio.
+  - Filas del acorde: Acorde completo, Power chord (fundamental + 5ª; añadida para poder duplicar «Rock en corcheas» sin cambiar su sonido) y Nota 1 a Nota 5 del arpegio.
   - Filas del bajo: Fundamental, 3ª y 5ª del acorde (siguen al acorde: en Dom la 3ª es Mi♭).
   - Filas de notas extra, contadas desde la fundamental: 2ª, 4ª, 6ª, 7ª menor y 7ª mayor (con Do: Re, Fa, La, Si♭ y Si). Cada una se puede poner en el registro grave (bajo) o en el medio (acorde).
 - **Intensidad:** cada patrón elige si usa intensidades. Sin intensidades, todas las notas suenan igual. Con intensidades, cada casilla tiene tres niveles (suave, media o fuerte) que se cambian con clics sucesivos.
@@ -182,6 +182,12 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 **Notas de la fase 1**
 - Los umbrales del reconocimiento de dedos se ajustaron con unas 120 fotos de manos reales: acierta el 92 %. Las que fallan están de canto o del dorso; tocando con la palma de frente funciona mucho mejor.
 - Los gestos 3 dedos, 4 dedos, 🤙 y 🤘 no tienen fotos reales de prueba: solo están comprobados con manos simuladas. Hay que verificarlos con manos de verdad.
+**Notas de la fase 5**
+- El editor se abre desde la configuración (sección de la mano derecha, «Editor de patrones»). Su selector de compás es el mismo compás de la app.
+- Mientras el editor está abierto, los gestos no cambian lo que suena (para poder escuchar el patrón en bucle).
+- Los patrones propios se guardan aparte de los ajustes. Al borrar uno, los gestos que lo tocaban pasan al bloque sostenido.
+- Al duplicar un patrón de fábrica se conservan todas sus notas. Las duraciones pasan a «ligado» (cada nota hasta la siguiente de su fila) y las intensidades, a los tres niveles.
+
 **Notas de la fase 4**
 - Rejilla del reloj: semicorcheas en 2/4, 3/4 y 4/4; corcheas en 3/8, 6/8, 9/8 y 12/8. La lógica de cuándo entra un cambio está en `docs/js/music/timing.js`, con pruebas propias.
 - Además de los cambios de acorde, elegir un patrón un poco tarde (hasta una semicorchea después de un paso) hace sonar al momento las notas de ese paso.

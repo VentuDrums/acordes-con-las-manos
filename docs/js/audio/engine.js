@@ -165,6 +165,14 @@ export class AudioEngine {
     this.applyNow(voicing, label);
   }
 
+  // Escucha del editor de patrones: el acorde suena ya, sin cuenta previa ni espera al compás.
+  playNow(voicing, label) {
+    if (!this.ready) return;
+    this.pending = null;
+    this.countInUntil = null;
+    this.applyNow(voicing, label);
+  }
+
   // El acorde entra ya: si se reinicia el patrón, desde la siguiente unidad; si no, corrigiendo
   // al momento lo que suena o está a punto de sonar.
   applyNow(voicing, label) {
