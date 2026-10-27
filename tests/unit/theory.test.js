@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SCALES, diatonicChord, romanNumeral, chordName, voiceChord, spellingForScale } from '../../docs/js/music/theory.js';
+import { SCALES, diatonicChord, romanNumeral, chordName, voiceChord, spellingForScale, scaleDegrees, noteName } from '../../docs/js/music/theory.js';
 
 const degrees = [0, 1, 2, 3, 4, 5, 6];
 const names = (tonic, scale, sevenths = false, notation = 'latin') =>
@@ -46,7 +46,9 @@ test('todas las escalas dan acordes conocidos en todos los grados', () => {
 });
 
 test('notas MIDI: bajo en la octava 2 y acorde desde la octava 3', () => {
-  assert.deepEqual(voiceChord({ root: 0, quality: 'maj' }), { bass: 36, root: 36, third: 40, fifth: 43, notes: [48, 52, 55] });
+  assert.deepEqual(voiceChord({ root: 0, quality: 'maj' }), {
+    bass: 36, root: 36, third: 40, fifth: 43, degrees: [0, 2, 4, 5, 7, 9, 11], notes: [48, 52, 55],
+  });
   assert.equal(voiceChord({ root: 0, quality: 'min' }).third, 39, 'la tercera de Dom es Mi♭');
   assert.deepEqual(voiceChord({ root: 9, quality: 'min' }).notes, [57, 60, 64]);
   assert.deepEqual(voiceChord({ root: 7, quality: '7' }).notes, [55, 59, 62, 65]);
@@ -69,4 +71,16 @@ test('inversiones de Do mayor (anexo del plan)', () => {
   assert.deepEqual([Cmaj7.bass, ...Cmaj7.notes], [47, 59, 60, 64, 67]); // Si2 · Si3 Do4 Mi4 Sol4
   const G = voiceChord({ root: 7, quality: 'maj' }, 'inv2');
   assert.deepEqual([G.bass, ...G.notes], [38, 50, 55, 59], 'Sol/Re: se baja de octava para no irse al agudo');
+});
+
+test('grados de la escala desde la fundamental del acorde, en la tonalidad', () => {
+  const names = (chord, key) => scaleDegrees(chord, key).map((d) => noteName(chord.root + d)).join(' ');
+  const doM = { tonic: 0, scale: 'major' };
+  assert.equal(names({ root: 2, quality: 'min' }, doM), 'Re Mi Fa Sol La Si Do', 'Rem en Do mayor: notas de Do mayor');
+  assert.equal(names({ root: 7, quality: '7' }, doM), 'Sol La Si Do Re Mi Fa');
+  assert.equal(names({ root: 0, quality: 'min' }, doM), 'Do Re Mi♭ Fa Sol La Si', 'la 3ª sigue al acorde');
+  assert.equal(names({ root: 10, quality: 'maj' }, doM), 'Si♭ Do Re Mi♭ Fa Sol La', 'acorde fuera de la tonalidad: su escala mayor');
+  assert.equal(names({ root: 9, quality: 'min' }, null), 'La Si Do Re Mi Fa Sol', 'sin tonalidad: menor natural');
+  assert.equal(names({ root: 11, quality: 'dim7' }, { tonic: 9, scale: 'harmonicMinor' }), 'Si Do Re Mi Fa La♭ La',
+    'Si°7 en La menor armónica: la 6ª es Sol♯ (La♭) y la 7ª, La; no se repite la 7ª disminuida');
 });

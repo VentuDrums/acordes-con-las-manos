@@ -43,13 +43,16 @@ const state = {
 };
 const fader = new VolumeFader(settings.volume);
 
+// Tonalidad elegida: los grados de la escala de los patrones propios se cuentan en ella.
+const keyOf = (s) => ({ tonic: s.tonic, scale: s.scale });
+
 // Lleva al motor de sonido el acorde actual con la inversión actual (o el silencio).
 function soundChord() {
   if (!state.playing) {
     engine.silence();
     return;
   }
-  const voicing = voiceChord(state.playing.chord, settings.inversion, settings.bassFollows);
+  const voicing = voiceChord(state.playing.chord, settings.inversion, settings.bassFollows, keyOf(settings));
   engine.setChord(voicing, describe(settings, state.playing, NOTATION).name);
 }
 
@@ -296,7 +299,7 @@ const editor = initPatternEditor({
     await engine.start();
     state.previewPattern = id;
     syncEngine();
-    engine.playNow(voiceChord(chord, settings.inversion, settings.bassFollows), chord.name);
+    engine.playNow(voiceChord(chord, settings.inversion, settings.bassFollows, keyOf(settings)), chord.name);
   },
   // Al dejar de escuchar vuelve lo que tocaban las manos.
   stopPreview: () => {

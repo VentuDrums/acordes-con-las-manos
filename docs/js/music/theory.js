@@ -96,13 +96,39 @@ export function chordName(chord, notation = 'latin', spelling = 'mixed') {
 // Posiciones del acorde que elige la mano derecha en el modo inversión.
 export const INVERSIONS = ['root', 'inv1', 'inv2', 'inv3', 'open', 'octDown', 'octUp'];
 
-// Notas MIDI del acorde: { bass, root, third, fifth, notes }.
+// Notas MIDI del acorde: { bass, root, third, fifth, degrees, notes }.
 // - notes: el acorde, colocado desde la octava 3 según la inversión.
 // - bass: nota del bajo en la octava 2 (la fundamental o, si bassFollows, la nota más grave del acorde).
 // - root: la fundamental en la octava 2, aunque el bajo siga la inversión.
 // - third: la tercera por encima de la fundamental del bajo (para líneas de bajo como el boogie).
 // - fifth: la quinta del acorde en el bajo (para patrones que alternan fundamental y quinta).
-export function voiceChord(chord, inversion = 'root', bassFollows = true) {
+// - degrees: grados de la escala desde la fundamental (ver scaleDegrees), con la tonalidad `key`.
+// Grados de la escala contados desde la fundamental del acorde: 7 distancias en semitonos (1ª…7ª).
+// - Si la fundamental está en la escala de la tonalidad (key = { tonic, scale }), se usa esa escala:
+//   las notas de paso no se salen de la tonalidad (sobre Rem en Do mayor, la 2ª es Mi).
+// - Si no está (o no hay tonalidad), la escala mayor o menor natural del propio acorde.
+// - La 3ª, la 5ª y la 7ª (menor o mayor) siguen al acorde cuando el acorde las tiene (sobre Dom, la 3ª es Mi♭).
+export function scaleDegrees(chord, key = null) {
+  const { intervals } = QUALITIES[chord.quality];
+  let steps;
+  if (key) {
+    const pcs = SCALES[key.scale].map((s) => mod12(key.tonic + s));
+    const at = pcs.indexOf(mod12(chord.root));
+    if (at >= 0) steps = [0, 1, 2, 3, 4, 5, 6].map((k) => mod12(pcs[(at + k) % 7] - chord.root));
+  }
+  steps ??= SCALES[intervals.includes(3) && !intervals.includes(4) ? 'minor' : 'major'];
+  const degrees = [...steps];
+  const third = intervals.find((i) => i === 3 || i === 4);
+  const fifth = intervals.find((i) => i === 6 || i === 7 || i === 8);
+  // La 7ª disminuida (Si°7) suena como la 6ª de la escala: la 7ª solo sigue a séptimas menores o mayores.
+  const seventh = intervals.find((i) => i === 10 || i === 11);
+  if (third !== undefined) degrees[2] = third;
+  if (fifth !== undefined) degrees[4] = fifth;
+  if (seventh !== undefined) degrees[6] = seventh;
+  return degrees;
+}
+
+export function voiceChord(chord, inversion = 'root', bassFollows = true, key = null) {
   const { intervals } = QUALITIES[chord.quality];
   let notes = intervals.map((i) => 48 + chord.root + i);
   const rotations = { inv1: 1, inv2: 2, inv3: 3 }[inversion] ?? 0;
@@ -122,6 +148,7 @@ export function voiceChord(chord, inversion = 'root', bassFollows = true) {
     root: 36 + chord.root,
     third: 36 + chord.root + third,
     fifth: 36 + mod12(chord.root + fifth),
+    degrees: scaleDegrees(chord, key),
     notes,
   };
 }

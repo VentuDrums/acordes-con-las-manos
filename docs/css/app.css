@@ -241,7 +241,15 @@ dialog.editor { width: min(1100px, calc(100vw - 24px)); }
 #edGrid thead th { text-align: center; }
 #edGrid thead th.beat { color: var(--accent); }
 #edGrid td { padding: 2px; }
-#edGrid td.beat { border-left: 1px solid var(--line); }
+#edGrid td.beat { border-left: 1px solid var(--line); padding: 2px 4px; }
+.beat-cells { display: flex; gap: 2px; width: 128px; }
+.beat-cells .cell { flex: 1; min-width: 0; width: auto; }
+.beat-head { min-width: 128px; }
+.beat-head .beat-number { color: var(--accent); margin-right: 6px; }
+.beat-head select { font-size: 0.8rem; padding: 3px 6px; }
+#edGrid tr.group-title th { padding-top: 10px; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; position: static; }
+#edGrid tbody tr.group-scale th { color: #b9a6ff; }
+#edGrid tbody tr.group-scaleLow th { color: #ff9b7d; }
 #edGrid tbody tr.group-chord th { color: var(--left); }
 #edGrid tbody tr.group-arp th { color: #9be7ff; }
 #edGrid tbody tr.group-bass th { color: var(--right); }
@@ -252,7 +260,6 @@ dialog.editor { width: min(1100px, calc(100vw - 24px)); }
 .cell.level-3 { background: var(--accent); border-color: var(--accent); }
 .cell:disabled { opacity: 1; cursor: default; }
 .cell.level-0:disabled { opacity: 0.5; }
-.register { padding: 1px 8px; margin-left: 6px; font-size: 0.75rem; }
 
 /* Tablet en vertical y móvil: todo en una columna. */
 @media (max-width: 900px) {

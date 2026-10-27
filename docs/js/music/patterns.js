@@ -5,6 +5,7 @@
 // Cada paso tiene una lista de eventos [qué, duración, intensidad]:
 //   'C' = acorde completo · 'B' = bajo · 'F' = quinta en el bajo · 'T' = tercera en el bajo
 //   'P' = power chord (fundamental + quinta) · 'x9' = fundamental del bajo + 9 semitonos (notas de paso)
+//   'l3' / 'm3' = 3er grado de la escala en el bajo / en el registro de las notas (patrones propios)
 //   número = nota del arpegio (0 = la más grave del acorde; si pasa del número de notas, sube de octava).
 // El bloque sostenido no tiene pasos: el acorde suena mientras no cambie. Vale para todos los compases.
 import { METERS } from './timing.js';
@@ -179,6 +180,10 @@ export function notesForEvent(what, voicing) {
   if (what === 'T') return [voicing.third];
   if (what === 'P') return [voicing.root + 12, voicing.root + 19];
   if (typeof what === 'string' && what[0] === 'x') return [voicing.root + Number(what.slice(1))];
+  // Grado de la escala en el bajo ('l1'…'l7') o en el registro de las notas ('m1'…'m7').
+  if (typeof what === 'string' && (what[0] === 'l' || what[0] === 'm')) {
+    return [voicing.root + (what[0] === 'm' ? 12 : 0) + voicing.degrees[Number(what.slice(1)) - 1]];
+  }
   const len = voicing.notes.length;
   return [voicing.notes[what % len] + 12 * Math.floor(what / len)];
 }

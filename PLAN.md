@@ -2,7 +2,7 @@
 
 Sinte de acompañamiento que se toca con gestos delante de la webcam. Proyecto para el máster de IA aplicada a la educación, abierto a cualquiera que quiera usarlo.
 
-Estado: **fase 5 terminada**, pendiente de que la pruebe el usuario.
+Estado: **fase 5 ampliada** (subdivisión por pulso y notas de la escala), pendiente de que la pruebe el usuario.
 
 ## 1. Objetivo y público
 
@@ -120,10 +120,10 @@ El detalle de las notas de cada patrón está en el anexo A.
 
 - **Fábrica y propios:** los patrones de fábrica no se modifican. Con «Duplicar y editar» o «Nuevo patrón» se crea un patrón propio, que aparece en la lista de su compás y se puede asignar a un gesto. Los patrones propios se guardan en el navegador.
 - **Rejilla tipo step sequencer:**
-  - Columnas: subdivisiones del compás. Semicorcheas en 2/4, 3/4 y 4/4; corcheas en 3/8, 6/8, 9/8 y 12/8.
-  - Filas del acorde: Acorde completo, Power chord (fundamental + 5ª; añadida para poder duplicar «Rock en corcheas» sin cambiar su sonido) y Nota 1 a Nota 5 del arpegio.
-  - Filas del bajo: Fundamental, 3ª y 5ª del acorde (siguen al acorde: en Dom la 3ª es Mi♭).
-  - Filas de notas extra, contadas desde la fundamental: 2ª, 4ª, 6ª, 7ª menor y 7ª mayor (con Do: Re, Fa, La, Si♭ y Si). Cada una se puede poner en el registro grave (bajo) o en el medio (acorde).
+  - Columnas: los pulsos del compás. **Cada pulso elige su subdivisión** (cambio pedido tras probar la fase 5): en 2/4, 3/4 y 4/4, negra, corcheas, tresillo, semicorcheas o seisillo; en 3/8, 6/8, 9/8 y 12/8, negra con puntillo, dosillo, corcheas, cuatrillo o semicorcheas. Al cambiar la subdivisión, cada nota pasa a la casilla más cercana.
+  - Filas del acorde: Acorde completo, Power chord y Nota 1 a Nota 5 del acorde (arpegio).
+  - Fila del bajo del acorde (sigue la inversión si el ajuste está activado).
+  - **Todas las notas de la escala** (cambio pedido tras probar la fase 5), en dos bloques: en el registro de las notas y en el bajo. Son los grados 1ª a 7ª contados desde la fundamental del acorde que suena, en la tonalidad elegida, para que las notas de paso no se salgan de la escala (sobre Rem en Do mayor, la 2ª es Mi). La 3ª, la 5ª y la 7ª (menor o mayor) siguen al acorde cuando el acorde las tiene (sobre Dom, la 3ª es Mi♭; sobre Sol7, la 7ª es Fa). Sustituyen a las filas fijas de la fase 5 (3ª y 5ª del bajo y notas extra 2ª, 4ª, 6ª, 7ª menor y 7ª mayor).
 - **Intensidad:** cada patrón elige si usa intensidades. Sin intensidades, todas las notas suenan igual. Con intensidades, cada casilla tiene tres niveles (suave, media o fuerte) que se cambian con clics sucesivos.
 - **Duración:** un ajuste para todo el patrón, picado o ligado.
 - **Escucha:** mientras editas, el patrón suena en bucle con el acorde que elijas (por ejemplo, Do, Dom o Do7).
@@ -182,6 +182,13 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 **Notas de la fase 1**
 - Los umbrales del reconocimiento de dedos se ajustaron con unas 120 fotos de manos reales: acierta el 92 %. Las que fallan están de canto o del dorso; tocando con la palma de frente funciona mucho mejor.
 - Los gestos 3 dedos, 4 dedos, 🤙 y 🤘 no tienen fotos reales de prueba: solo están comprobados con manos simuladas. Hay que verificarlos con manos de verdad.
+**Notas de la ampliación del editor**
+- Copia de seguridad de la versión anterior en la rama `version-fase-5` de GitHub.
+- El reloj avanza en doceavos de pulso (caben negras, corcheas, tresillos, semicorcheas y seisillos). Los patrones de fábrica siguen igual.
+- Los patrones propios se guardan en un formato nuevo y en otro sitio del navegador; los de la fase 5 se convierten solos y el formato anterior no se toca, así que si se vuelve a la versión anterior siguen ahí (los creados después del cambio, no).
+- Al duplicar el boogie, su Si♭ (7ª menor) pasa a ser la 7ª de la escala (Si en Do mayor).
+- Arreglado: al editar un patrón mientras sonaba, pasaba a sonar el patrón de la mano derecha.
+
 **Notas de la fase 5**
 - El editor se abre desde la configuración (sección de la mano derecha, «Editor de patrones»). Su selector de compás es el mismo compás de la app.
 - Mientras el editor está abierto, los gestos no cambian lo que suena (para poder escuchar el patrón en bucle).

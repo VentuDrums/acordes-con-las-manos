@@ -2,7 +2,9 @@
 import { t } from '../i18n.js';
 import { PATTERNS, patternsFor } from '../music/patterns.js';
 import { METERS } from '../music/timing.js';
-import { ROWS, toEditable, emptyPattern, savePatterns, patternLabel } from '../music/custom-patterns.js';
+import {
+  ROWS, SUBDIVISIONS, toEditable, emptyPattern, savePatterns, patternLabel, setSubdivision,
+} from '../music/custom-patterns.js';
 
 const $ = (sel) => document.querySelector(sel);
 // Clics sucesivos en una casilla: apagada → media → fuerte → suave → apagada (con intensidades).
@@ -58,22 +60,32 @@ export function initPatternEditor({ settings, patterns, onChange, preview, stopP
     $('#edPlay').textContent = previewing ? `⏹ ${t('stop')}` : `▶ ${t('listen')}`;
   }
 
-  // Rejilla: una fila por tipo de nota y una columna por semicorchea (o corchea).
+  // Rejilla: una fila por tipo de nota y una columna por pulso, partida en las casillas de su
+  // subdivisión. Las filas se agrupan: acorde, notas del acorde, bajo, escala y escala en el bajo.
   function renderGrid() {
     const editable = custom();
     const source = editable ?? toEditable(selected, '');
-    const { steps, beat } = METERS[settings.meter];
-    const head = Array.from({ length: steps }, (_, s) => `<th scope="col" class="${s % beat ? '' : 'beat'}">${s % beat ? '·' : s / beat + 1}</th>`).join('');
+    const { beat } = METERS[settings.meter];
+    const compound = METERS[settings.meter].compound;
+    const subOptions = (b) => options(SUBDIVISIONS.map((n) => [n, t(`sub${compound ? 'C' : 'S'}_${n}`)]), source.subdivisions[b]);
+    const head = source.subdivisions.map((_, b) => `<th scope="col" class="beat-head">
+        <span class="beat-number">${b + 1}</span>
+        <select data-subdiv="${b}" aria-label="${t('subdivisionOf', { n: b + 1 })}"${editable ? '' : ' disabled'}>${subOptions(b)}</select>
+      </th>`).join('');
+    let group = null;
     const rows = ROWS.map((row) => {
-      const register = row.group === 'extra'
-        ? ` <button class="register" data-register="${row.id}"${editable ? '' : ' disabled'}>${t(source.registers[row.id] === 'mid' ? 'registerMid' : 'registerLow')}</button>`
-        : '';
-      const cells = Array.from({ length: steps }, (_, s) => {
-        const level = source.cells[row.id]?.[s] ?? 0;
-        const label = `${t(`row_${row.id}`)}, ${s + 1}: ${t(`level_${level}`)}`;
-        return `<td class="${s % beat ? '' : 'beat'}"><button class="cell level-${level}" data-row="${row.id}" data-step="${s}" aria-label="${label}"${editable ? '' : ' disabled'}></button></td>`;
+      const title = row.group !== group ? `<tr class="group-title group-${row.group}"><th colspan="${source.subdivisions.length + 1}">${t(`group_${row.group}`)}</th></tr>` : '';
+      group = row.group;
+      const beats = source.subdivisions.map((sub, b) => {
+        const cells = Array.from({ length: sub }, (_, i) => {
+          const unit = b * beat + i * (beat / sub);
+          const level = source.cells[row.id]?.[unit] ?? 0;
+          const label = `${t(`group_${row.group}`)} · ${t(`row_${row.id}`)}, ${t('beatPart', { beat: b + 1, part: i + 1 })}: ${t(`level_${level}`)}`;
+          return `<button class="cell level-${level}" data-row="${row.id}" data-unit="${unit}" aria-label="${label}"${editable ? '' : ' disabled'}></button>`;
+        }).join('');
+        return `<td class="beat"><div class="beat-cells">${cells}</div></td>`;
       }).join('');
-      return `<tr class="group-${row.group}"><th scope="row">${t(`row_${row.id}`)}${register}</th>${cells}</tr>`;
+      return `${title}<tr class="group-${row.group}"><th scope="row">${t(`row_${row.id}`)}</th>${beats}</tr>`;
     }).join('');
     $('#edGrid').innerHTML = `<thead><tr><th></th>${head}</tr></thead><tbody>${rows}</tbody>`;
   }
@@ -118,7 +130,7 @@ export function initPatternEditor({ settings, patterns, onChange, preview, stopP
   });
   $('#edDuplicate').addEventListener('click', () => {
     const p = toEditable(selected, t('copyName', { name: patternLabel(selected, t) }).slice(0, 40));
-    if (custom()) Object.assign(p, { dynamics: custom().dynamics, legato: custom().legato });
+    if (custom()) Object.assign(p, { dynamics: custom().dynamics, legato: custom().legato, subdivisions: [...custom().subdivisions] });
     patterns.push(p);
     selected = p.id;
     changed();
@@ -155,23 +167,24 @@ export function initPatternEditor({ settings, patterns, onChange, preview, stopP
   }));
   $('#edGrid').addEventListener('click', (e) => {
     const p = custom();
-    if (!p) return;
-    const reg = e.target.closest('[data-register]');
-    if (reg) {
-      p.registers[reg.dataset.register] = p.registers[reg.dataset.register] === 'mid' ? 'low' : 'mid';
-      changed();
-      return;
-    }
     const cell = e.target.closest('[data-row]');
-    if (!cell) return;
-    const { row, step } = cell.dataset;
-    const level = p.cells[row]?.[step] ?? 0;
+    if (!p || !cell) return;
+    const { row } = cell.dataset;
+    const unit = Number(cell.dataset.unit);
+    const level = p.cells[row]?.[unit] ?? 0;
     const next = p.dynamics ? NEXT_LEVEL[level] : (level ? 0 : 2);
-    if (next) (p.cells[row] ??= {})[step] = next;
+    if (next) (p.cells[row] ??= {})[unit] = next;
     else {
-      delete p.cells[row][step];
+      delete p.cells[row][unit];
       if (!Object.keys(p.cells[row]).length) delete p.cells[row];
     }
+    changed();
+  });
+  $('#edGrid').addEventListener('change', (e) => {
+    const p = custom();
+    const b = e.target.dataset.subdiv;
+    if (!p || b === undefined) return;
+    setSubdivision(p, Number(b), Number(e.target.value));
     changed();
   });
   $('#edPlay').addEventListener('click', () => {
