@@ -7,6 +7,8 @@
 // - legato: cada nota dura hasta la siguiente de su fila; si no, picado (media casilla).
 import { PATTERNS, registerPatterns } from './patterns.js';
 import { METERS, unitsPerQuarter } from './timing.js';
+// Unidades del reloj por casilla de la rejilla del editor (semicorchea o corchea).
+const unitsPerCell = (meter) => METERS[meter].beat / METERS[meter].grid;
 
 const STORAGE_KEY = 'acordes-con-las-manos:patrones';
 const MAX_PATTERNS = 60;
@@ -38,8 +40,9 @@ export function rowEvent(rowId, register = 'low') {
 
 // Convierte un patrón propio en el formato del motor: { meter, name, custom, events }.
 export function compile(pattern) {
-  const { steps } = METERS[pattern.meter];
-  const ticksPerUnit = PPQ / unitsPerQuarter(pattern.meter);
+  const steps = METERS[pattern.meter].beats * METERS[pattern.meter].grid;
+  const factor = unitsPerCell(pattern.meter);
+  const ticksPerUnit = (PPQ / unitsPerQuarter(pattern.meter)) * factor;
   const events = {};
   for (const rowId of ROW_IDS) {
     const row = pattern.cells[rowId];
@@ -50,7 +53,7 @@ export function compile(pattern) {
       const gap = (next - step + steps) % steps || steps;
       const units = pattern.legato ? gap : 0.5;
       const velocity = pattern.dynamics ? LEVEL_VELOCITY[row[step]] : FLAT_VELOCITY;
-      (events[step] ??= []).push([rowEvent(rowId, pattern.registers[rowId]), `${Math.round(units * ticksPerUnit)}i`, velocity]);
+      (events[step * factor] ??= []).push([rowEvent(rowId, pattern.registers[rowId]), `${Math.round(units * ticksPerUnit)}i`, velocity]);
     });
   }
   return { meter: pattern.meter, name: pattern.name, custom: true, events };
@@ -64,7 +67,9 @@ export function toEditable(id, name) {
   const source = PATTERNS[id];
   const cells = {};
   const registers = {};
-  for (const [step, events] of Object.entries(source.events)) {
+  const factor = unitsPerCell(source.meter ?? '4/4');
+  for (const [unit, events] of Object.entries(source.events)) {
+    const step = Number(unit) / factor;
     for (const [what] of events) {
       let row;
       if (typeof what === 'number') row = String(Math.min(what, 4));
@@ -95,7 +100,7 @@ export function sanitizePatterns(saved) {
   const out = [];
   for (const p of saved.slice(0, MAX_PATTERNS)) {
     if (!p || typeof p !== 'object' || !/^u[a-z0-9]+$/.test(p.id) || !Object.hasOwn(METERS, p.meter)) continue;
-    const { steps } = METERS[p.meter];
+    const steps = METERS[p.meter].beats * METERS[p.meter].grid;
     const cells = {};
     for (const rowId of ROW_IDS) {
       const row = p.cells?.[rowId];

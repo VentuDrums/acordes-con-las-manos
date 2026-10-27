@@ -46,7 +46,7 @@ test('nuevo patrón: se dibuja en la rejilla, se asigna a un gesto, suena y se g
     await page.waitForTimeout(4500); // un compás completo a 90 ppm dura 2,7 s
     const notes = await page.evaluate(() => window.acordes.engine.noteLog.filter((n) => n.kind === 'note'));
     const byStep = Object.fromEntries(notes.map((n) => [n.step, n.notes]));
-    assert.deepEqual(byStep, { 0: [36], 4: [48, 52, 55], 8: [48, 52, 55], 12: [48, 52, 55] });
+    assert.deepEqual(byStep, { 0: [36], 12: [48, 52, 55], 24: [48, 52, 55], 36: [48, 52, 55] }, 'en unidades: una negra = 12');
 
     await page.reload();
     assert.equal(await page.textContent('#rightLegend button[data-gesture="one"] .what'), 'Mi groove', 'se guarda');

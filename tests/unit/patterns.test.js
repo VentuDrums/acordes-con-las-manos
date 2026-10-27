@@ -8,12 +8,15 @@ import { voiceChord } from '../../docs/js/music/theory.js';
 const C = voiceChord({ root: 0, quality: 'maj' });
 const NAMES = { 36: 'Do2', 40: 'Mi2', 43: 'Sol2', 45: 'La2', 46: 'Si♭2', 48: 'Do3', 52: 'Mi3', 55: 'Sol3', 60: 'Do4', 64: 'Mi4' };
 const name = (n) => NAMES[n] ?? n;
-// Compás completo: { paso: 'notas' }.
+// Compás completo: { casilla: 'notas' }, con casillas de semicorchea (o corchea en compases
+// ternarios) como en el anexo. El reloj cuenta doceavos de pulso: se traducen.
 function bar(id, voicing = C) {
+  const m = METERS[PATTERNS[id].meter];
+  const perCell = m.beat / m.grid;
   const out = {};
-  for (let s = 0; s < METERS[PATTERNS[id].meter].steps; s++) {
+  for (let s = 0; s < m.steps; s++) {
     const evs = notesForStep(id, s, voicing);
-    if (evs.length) out[s] = evs.map((e) => e.notes.map(name).join('-')).join(' + ');
+    if (evs.length) out[s / perCell] = evs.map((e) => e.notes.map(name).join('-')).join(' + ');
   }
   return out;
 }
@@ -93,7 +96,10 @@ test('todos los patrones: pasos válidos, notas razonables y duraciones de Tone'
   for (const [id, p] of Object.entries(PATTERNS)) {
     if (p.sustain) continue;
     const steps = METERS[p.meter].steps;
-    for (const step of Object.keys(p.events)) assert.ok(Number(step) < steps, `${id} paso ${step}`);
+    for (const step of Object.keys(p.events)) {
+      assert.ok(Number(step) < steps, `${id} paso ${step}`);
+      assert.equal(Number(step) % (METERS[p.meter].beat / METERS[p.meter].grid), 0, `${id}: ${step} en la rejilla`);
+    }
     for (let s = 0; s < steps; s++) {
       for (const ev of notesForStep(id, s, v)) {
         for (const n of ev.notes) assert.ok(Number.isInteger(n) && n >= 24 && n <= 96, `${id}: nota ${n}`);

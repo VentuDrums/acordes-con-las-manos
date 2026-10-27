@@ -1,6 +1,7 @@
 // Patrones de acompañamiento de fábrica (anexo A del plan).
 //
-// Rejilla: semicorcheas en 2/4, 3/4 y 4/4; corcheas en 3/8, 6/8, 9/8 y 12/8 (ver timing.js).
+// Se escriben en una rejilla de semicorcheas (2/4, 3/4, 4/4) o corcheas (3/8, 6/8, 9/8, 12/8) y al
+// cargar se pasan a las unidades del reloj (doceavos de pulso, ver timing.js).
 // Cada paso tiene una lista de eventos [qué, duración, intensidad]:
 //   'C' = acorde completo · 'B' = bajo · 'F' = quinta en el bajo · 'T' = tercera en el bajo
 //   'P' = power chord (fundamental + quinta) · 'x9' = fundamental del bajo + 9 semitonos (notas de paso)
@@ -154,6 +155,13 @@ export const PATTERNS = {
   },
 };
 
+// De la rejilla en que están escritos a las unidades del reloj.
+for (const p of Object.values(PATTERNS)) {
+  if (!p.meter) continue;
+  const factor = METERS[p.meter].beat / METERS[p.meter].grid;
+  p.events = Object.fromEntries(Object.entries(p.events).map(([step, evs]) => [Number(step) * factor, evs]));
+}
+
 // Patrones propios (editor): se añaden a PATTERNS. Cada llamada sustituye a los anteriores.
 export function registerPatterns(custom) {
   for (const id of Object.keys(PATTERNS)) if (PATTERNS[id].custom) delete PATTERNS[id];
@@ -175,7 +183,7 @@ export function notesForEvent(what, voicing) {
   return [voicing.notes[what % len] + 12 * Math.floor(what / len)];
 }
 
-// Eventos de un paso con sus notas: [{ what, notes, duration, velocity }].
+// Eventos de un paso (unidad dentro del compás) con sus notas: [{ what, notes, duration, velocity }].
 export function notesForStep(patternId, step, voicing) {
   const pattern = PATTERNS[patternId];
   const steps = METERS[pattern.meter ?? '4/4'].steps;

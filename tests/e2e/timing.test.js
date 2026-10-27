@@ -1,5 +1,7 @@
 // Fase 4 en Chromium: compases, metrónomo, cuenta previa y cuándo entra el acorde nuevo.
 // Para los cambios «tarde» la prueba espera a un punto exacto del compás y hace el gesto ahí.
+// El reloj cuenta doceavos de pulso: en 4/4 una semicorchea son 3 unidades y el compás, 48.
+// Las posiciones de gestureAt se dan en semicorcheas (corcheas en compases ternarios).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,21 +17,25 @@ const settingsDo = async (page, fn) => {
   await page.click('#settingsDialog .dialog-head button');
 };
 
-// Espera a que el reloj esté en [from, to) unidades dentro del compás y entonces toca el gesto.
+// Espera a que el reloj esté en [from, to) casillas dentro del compás y entonces toca el gesto.
 const gestureAt = (page, gesture, from, to) => page.evaluate(async ([g, a, b]) => {
   const e = window.acordes.engine;
-  const steps = { '2/4': 8, '3/4': 12, '4/4': 16, '3/8': 3, '6/8': 6, '9/8': 9, '12/8': 12 }[e.meter];
+  const steps = { '2/4': 24, '3/4': 36, '4/4': 48, '3/8': 12, '6/8': 24, '9/8': 36, '12/8': 48 }[e.meter];
+  const perCell = e.meter.endsWith('/8') ? 4 : 3;
   for (let i = 0; i < 2000; i++) {
     const u = e.unitAt(Tone.immediate());
-    const pos = (((u - e.phase) % steps) + steps) % steps;
-    if (pos >= a && pos < b) {
+    const posUnits = (((u - e.phase) % steps) + steps) % steps;
+    if (posUnits >= a * perCell && posUnits < b * perCell) {
       document.querySelector(`#legend button[data-gesture="${g}"]`).click();
-      return { unit: u, pos };
+      return { unit: u, posUnits };
     }
     await new Promise((r) => setTimeout(r, 5));
   }
   throw new Error('no se llegó al punto del compás');
 }, [gesture, from, to]);
+
+// Unidad en la que empezó el compás del gesto.
+const barStartOf = (r) => Math.round(r.unit - r.posUnits);
 
 const engineLogs = (page) => page.evaluate(() => {
   const e = window.acordes.engine;
@@ -93,15 +99,15 @@ test('metrónomo: un click por pulso con acento en la primera parte (4/4 y 6/8)'
     await page.waitForTimeout(3000);
     let { clicks } = await engineLogs(page);
     assert.ok(clicks.length >= 4, `pocos clicks: ${clicks.length}`);
-    assert.ok(clicks.every((c) => c.step % 4 === 0), 'en 4/4 un click cada negra');
+    assert.ok(clicks.every((c) => c.step % 12 === 0), 'en 4/4 un click cada negra');
     assert.ok(clicks.every((c) => c.accent === (c.step === 0)), 'acento solo en la primera parte');
 
     await settingsDo(page, () => page.selectOption('#meterSelect', '6/8'));
     await page.waitForTimeout(3000);
     ({ clicks } = await engineLogs(page));
     const in68 = clicks.filter((c) => c.at === undefined || true).slice(-4);
-    assert.ok(in68.every((c) => c.step % 3 === 0), `en 6/8 un click cada negra con puntillo: ${JSON.stringify(in68)}`);
-    assert.ok(in68.some((c) => c.step === 3) && in68.some((c) => c.step === 0));
+    assert.ok(in68.every((c) => c.step % 12 === 0), `en 6/8 un click cada negra con puntillo: ${JSON.stringify(in68)}`);
+    assert.ok(in68.some((c) => c.step === 12) && in68.some((c) => c.step === 0));
     assert.match(await page.textContent('#soundInfo'), /^6\/8 · 90 ppm/);
     assert.equal(await page.locator('#beats span').count(), 2, 'dos pulsos en pantalla');
     // La mano derecha muestra los patrones de 6/8.
@@ -130,10 +136,10 @@ test('3/4: el vals suena bajo-acorde-acorde y un compás dura 12 semicorcheas', 
     const { notes } = await engineLogs(page);
     const bars = notes.filter((n) => n.step === 0).map((n) => n.unit);
     assert.ok(bars.length >= 2, 'al menos dos compases');
-    assert.equal(bars[1] - bars[0], 12);
-    assert.deepEqual([...new Set(notes.map((n) => n.step))].sort((a, b) => a - b), [0, 4, 8]);
+    assert.equal(bars[1] - bars[0], 36, 'tres negras de 12 unidades');
+    assert.deepEqual([...new Set(notes.map((n) => n.step))].sort((a, b) => a - b), [0, 12, 24]);
     assert.deepEqual(notes.find((n) => n.step === 0).notes, [36]);
-    assert.deepEqual(notes.find((n) => n.step === 4).notes, [48, 52, 55]);
+    assert.deepEqual(notes.find((n) => n.step === 12).notes, [48, 52, 55]);
     assert.deepEqual(app.errors, []);
   } finally {
     await app.close();
@@ -155,14 +161,14 @@ test('al instante: si el gesto llega tarde, el bajo nuevo entra en ese momento',
     const late = await gestureAt(page, 'two', 0.2, 0.7); // Rem
     await page.waitForTimeout(300);
     let { notes } = await engineLogs(page);
-    let fix = notes.find((n) => n.kind === 'replace' && n.unit === Math.floor(late.unit) && n.notes.includes(38));
+    let fix = notes.find((n) => n.kind === 'replace' && n.unit === barStartOf(late) && n.notes.includes(38));
     assert.ok(fix, `el bajo Re2 debía sonar al momento: ${JSON.stringify(notes.filter((n) => n.unit >= Math.floor(late.unit)))}`);
 
     // 2) A mitad del compás: el bajo largo (blanca) de Re se sustituye por el de Fa.
     const mid = await gestureAt(page, 'four', 5.2, 5.8); // Fa
     await page.waitForTimeout(300);
     ({ notes } = await engineLogs(page));
-    const barStart = Math.floor(mid.unit) - Math.floor(mid.pos);
+    const barStart = barStartOf(mid);
     fix = notes.find((n) => n.kind === 'replace' && n.unit === barStart && n.notes.includes(41));
     assert.ok(fix, `el bajo largo debía pasar a Fa2 al momento: ${JSON.stringify(notes.slice(-6))}`);
     assert.deepEqual(app.errors, []);
@@ -183,17 +189,17 @@ test('elegir un patrón un poco tarde: las notas de la parte fuerte suenan al mo
       const e = window.acordes.engine;
       for (let i = 0; i < 2000; i++) {
         const u = e.unitAt(Tone.immediate());
-        const pos = (((u - e.phase) % 16) + 16) % 16;
-        if (pos >= 0.2 && pos < 0.7) {
+        const pos = (((u - e.phase) % 48) + 48) % 48;
+        if (pos >= 0.6 && pos < 2.1) { // entre 0,2 y 0,7 semicorcheas después del 1
           document.querySelector('#rightLegend button[data-gesture="three"]').click(); // rasgueo pop
-          return u;
+          return Math.round(u - pos);
         }
         await new Promise((r) => setTimeout(r, 5));
       }
       throw new Error('no se llegó al punto del compás');
     });
     const { notes } = await engineLogs(page);
-    const caught = notes.filter((n) => n.kind === 'catchup' && n.unit === Math.floor(at));
+    const caught = notes.filter((n) => n.kind === 'catchup' && n.unit === at);
     assert.deepEqual(caught.map((n) => n.notes), [[36], [48, 52, 55]], 'bajo y acorde del 1 al momento');
     assert.deepEqual(app.errors, []);
   } finally {
@@ -220,8 +226,7 @@ test('siguiente compás: el acorde espera al compás siguiente y se ve en espera
     await page.waitForFunction(() => window.acordes.engine.log.at(-1).label === 'Sol', null, { timeout: 6000 });
     const { log, notes } = await engineLogs(page);
     const applied = log.at(-1);
-    const barStart = Math.floor(req.unit) - Math.floor(req.pos);
-    assert.equal(applied.unit, barStart + 16, 'entra en el compás siguiente');
+    assert.equal(applied.unit, barStartOf(req) + 48, 'entra en el compás siguiente');
     assert.ok(!notes.some((n) => n.kind === 'replace'), 'no se corrige nada: espera');
     await page.waitForFunction(() => !document.querySelector('.chord').classList.contains('pending'), null, { timeout: 3000 });
     assert.deepEqual(app.errors, []);
@@ -247,7 +252,7 @@ test('reiniciar el patrón: al cambiar de acorde el patrón vuelve a empezar', a
     const { notes } = await engineLogs(page);
     const restart = notes.find((n) => n.unit > req.unit && n.step === 0);
     assert.ok(restart, 'hay un paso 0 tras el cambio');
-    assert.ok(restart.unit - req.unit <= 2, `el patrón empieza de nuevo enseguida (${restart.unit} vs ${req.unit})`);
+    assert.ok(restart.unit - req.unit <= 6, `el patrón empieza de nuevo enseguida (${restart.unit} vs ${req.unit})`);
     assert.deepEqual(restart.notes, [38], 'empieza con el bajo de Rem');
     assert.deepEqual(app.errors, []);
   } finally {
@@ -274,7 +279,7 @@ test('cuenta previa: un compás de clicks y el acorde entra en el siguiente', as
     const countClicks = clicks.filter((c) => c.countIn);
     assert.equal(countClicks.length, 4, 'cuatro clicks en 4/4 aunque el click esté desactivado');
     assert.equal(countClicks[0].step, 0);
-    assert.equal(log.find((e) => e.label === 'Do').unit, countClicks[0].unit + 16, 'el acorde entra un compás después');
+    assert.equal(log.find((e) => e.label === 'Do').unit, countClicks[0].unit + 48, 'el acorde entra un compás después');
     assert.ok(!clicks.some((c) => !c.countIn), 'fuera de la cuenta no hay clicks (click desactivado)');
     assert.ok(await page.isHidden('#countIn'));
     assert.deepEqual(app.errors, []);

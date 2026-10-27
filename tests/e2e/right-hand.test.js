@@ -73,7 +73,7 @@ test('modo ritmo: el patrón suena a tempo y el cambio de acorde no lo descuadra
     const after = await page.evaluate((n) => window.acordes.engine.noteLog.slice(n), before);
     const downbeat = after.filter((e) => e.step === 0).slice(-2).flatMap((e) => e.notes);
     assert.deepEqual(downbeat, [38, 50], 'el compás empieza con Re2 + Re3');
-    assert.ok(after.every((e) => e.step % 2 === 0), 'las notas caen en las corcheas del compás');
+    assert.ok(after.every((e) => e.step % 6 === 0), 'las notas caen en las corcheas del compás (6 unidades)');
 
     // Con la meter de salida: suena algo.
     const level = await page.evaluate(async () => {

@@ -17,7 +17,7 @@ test('picado: cada nota dura media casilla; ligado: hasta la siguiente de su fil
   assert.deepEqual(staccato.events[0], [['B', `${sixteenth / 2}i`, 0.7]]);
   const legato = compile(pattern({ cells, legato: true }));
   assert.deepEqual(legato.events[0], [['B', `${8 * sixteenth}i`, 0.7]]);
-  assert.deepEqual(legato.events[12], [['C', `${8 * sixteenth}i`, 0.7]], 'la última nota llega hasta la primera del compás siguiente');
+  assert.deepEqual(legato.events[36], [['C', `${8 * sixteenth}i`, 0.7]], 'la última nota llega hasta la primera del compás siguiente');
 });
 
 test('una sola nota ligada en la fila dura el compás entero', () => {
@@ -39,7 +39,7 @@ test('filas: arpegio, bajo y notas extra en registro grave o medio', () => {
   }));
   applyPatterns([]); // limpia
   PATTERNS.utest = p;
-  const note = (s) => notesForStep('utest', s, C)[0].notes;
+  const note = (s) => notesForStep('utest', s * 3, C)[0].notes; // casilla de semicorchea → unidades
   assert.deepEqual(note(0), [55], 'Nota 3 = Sol3');
   assert.deepEqual(note(2), [40], 'Bajo: 3ª = Mi2');
   assert.deepEqual(note(4), [45], '6ª grave = La2');
@@ -59,7 +59,7 @@ test('duplicar un patrón de fábrica conserva todas sus notas', () => {
     applyPatterns([]);
     const copy = toEditable(id, 'copia');
     PATTERNS.ucopy = compile(copy);
-    for (let s = 0; s < METERS[PATTERNS[id].meter].steps; s++) {
+    for (let s = 0; s < METERS[PATTERNS[id].meter].steps; s++) {  // todas las unidades del compás
       const a = notesForStep(id, s, C).flatMap((e) => e.notes).sort();
       const b = notesForStep('ucopy', s, C).flatMap((e) => e.notes).sort();
       assert.deepEqual(b, a, `${id}, paso ${s}`);
