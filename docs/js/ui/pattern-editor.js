@@ -7,8 +7,6 @@ import {
 } from '../music/custom-patterns.js';
 
 const $ = (sel) => document.querySelector(sel);
-// Clics sucesivos en una casilla: apagada → media → fuerte → suave → apagada (con intensidades).
-const NEXT_LEVEL = { 0: 2, 2: 3, 3: 1, 1: 0 };
 const PREVIEW_CHORDS = {
   maj: { root: 0, quality: 'maj', name: 'Do' },
   min: { root: 0, quality: 'min', name: 'Dom' },
@@ -53,7 +51,6 @@ export function initPatternEditor({ settings, patterns, onChange, preview, stopP
     $('#edOptions').hidden = !editable;
     if (editable) {
       $('#edName').value = editable.name;
-      document.querySelectorAll('[data-ed-dynamics]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.edDynamics === String(editable.dynamics)));
       document.querySelectorAll('[data-ed-legato]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.edLegato === String(editable.legato)));
     }
     renderGrid();
@@ -79,9 +76,9 @@ export function initPatternEditor({ settings, patterns, onChange, preview, stopP
       const beats = source.subdivisions.map((sub, b) => {
         const cells = Array.from({ length: sub }, (_, i) => {
           const unit = b * beat + i * (beat / sub);
-          const level = source.cells[row.id]?.[unit] ?? 0;
-          const label = `${t(`group_${row.group}`)} · ${t(`row_${row.id}`)}, ${t('beatPart', { beat: b + 1, part: i + 1 })}: ${t(`level_${level}`)}`;
-          return `<button class="cell level-${level}" data-row="${row.id}" data-unit="${unit}" aria-label="${label}"${editable ? '' : ' disabled'}></button>`;
+          const on = Boolean(source.cells[row.id]?.[unit]);
+          const label = `${t(`group_${row.group}`)} · ${t(`row_${row.id}`)}, ${t('beatPart', { beat: b + 1, part: i + 1 })}`;
+          return `<button class="cell${on ? ' on' : ''}" data-row="${row.id}" data-unit="${unit}" aria-pressed="${on}" aria-label="${label}"${editable ? '' : ' disabled'}></button>`;
         }).join('');
         return `<td class="beat"><div class="beat-cells">${cells}</div></td>`;
       }).join('');
@@ -130,7 +127,7 @@ export function initPatternEditor({ settings, patterns, onChange, preview, stopP
   });
   $('#edDuplicate').addEventListener('click', () => {
     const p = toEditable(selected, t('copyName', { name: patternLabel(selected, t) }).slice(0, 40));
-    if (custom()) Object.assign(p, { dynamics: custom().dynamics, legato: custom().legato, subdivisions: [...custom().subdivisions] });
+    if (custom()) Object.assign(p, { legato: custom().legato, subdivisions: [...custom().subdivisions] });
     patterns.push(p);
     selected = p.id;
     changed();
@@ -157,28 +154,64 @@ export function initPatternEditor({ settings, patterns, onChange, preview, stopP
     onChange();
     renderPatternList();
   });
-  document.querySelectorAll('[data-ed-dynamics]').forEach((b) => b.addEventListener('click', () => {
-    custom().dynamics = b.dataset.edDynamics === 'true';
-    changed();
-  }));
   document.querySelectorAll('[data-ed-legato]').forEach((b) => b.addEventListener('click', () => {
     custom().legato = b.dataset.edLegato === 'true';
     changed();
   }));
-  $('#edGrid').addEventListener('click', (e) => {
+  // ---------- Pincel ----------
+  // Se pulsa una casilla y se arrastra: si la primera estaba vacía, se pintan todas las casillas por
+  // las que pasa el puntero; si estaba llena, se borran. Vale para ratón y para el dedo (con el dedo,
+  // el navegador manda los movimientos a la primera casilla, así que se busca la casilla bajo el dedo).
+  let brush = null; // { on, touched }
+
+  function setCell(cell, on) {
     const p = custom();
-    const cell = e.target.closest('[data-row]');
-    if (!p || !cell) return;
     const { row } = cell.dataset;
     const unit = Number(cell.dataset.unit);
-    const level = p.cells[row]?.[unit] ?? 0;
-    const next = p.dynamics ? NEXT_LEVEL[level] : (level ? 0 : 2);
-    if (next) (p.cells[row] ??= {})[unit] = next;
-    else {
+    if (on) (p.cells[row] ??= {})[unit] = 1;
+    else if (p.cells[row]) {
       delete p.cells[row][unit];
       if (!Object.keys(p.cells[row]).length) delete p.cells[row];
     }
-    changed();
+    cell.classList.toggle('on', on);
+    cell.setAttribute('aria-pressed', on);
+    // Se guarda y suena al momento, sin redibujar la rejilla (se perdería el arrastre).
+    savePatterns(patterns);
+    onChange();
+  }
+
+  function paint(cell) {
+    const key = `${cell.dataset.row}:${cell.dataset.unit}`;
+    if (brush.touched.has(key)) return;
+    brush.touched.add(key);
+    setCell(cell, brush.on);
+  }
+
+  const cellAt = (x, y) => {
+    const cell = document.elementFromPoint(x, y)?.closest('.cell');
+    return cell && !cell.disabled && $('#edGrid').contains(cell) ? cell : null;
+  };
+
+  $('#edGrid').addEventListener('pointerdown', (e) => {
+    const cell = e.target.closest('.cell');
+    if (!cell || cell.disabled || !custom() || e.button > 0) return;
+    e.preventDefault();
+    brush = { on: !cell.classList.contains('on'), touched: new Set() };
+    paint(cell);
+  });
+  document.addEventListener('pointermove', (e) => {
+    if (!brush) return;
+    const cell = cellAt(e.clientX, e.clientY);
+    if (cell) paint(cell);
+  });
+  const endBrush = () => { brush = null; };
+  document.addEventListener('pointerup', endBrush);
+  document.addEventListener('pointercancel', endBrush);
+  // Teclado (Intro o espacio sobre una casilla): enciende o apaga esa casilla.
+  $('#edGrid').addEventListener('click', (e) => {
+    const cell = e.target.closest('.cell');
+    if (!cell || cell.disabled || !custom() || e.detail !== 0) return;
+    setCell(cell, !cell.classList.contains('on'));
   });
   $('#edGrid').addEventListener('change', (e) => {
     const p = custom();

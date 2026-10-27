@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   compile, toEditable, emptyPattern, sanitizePatterns, applyPatterns, patternLabel, setSubdivision, migrateV1,
-  cellPositions, LEVEL_VELOCITY,
+  cellPositions, VELOCITY,
 } from '../../docs/js/music/custom-patterns.js';
 import { PATTERNS, notesForStep, patternsFor } from '../../docs/js/music/patterns.js';
 import { METERS, PPQ } from '../../docs/js/music/timing.js';
@@ -37,11 +37,9 @@ test('picado: media casilla de su pulso; ligado: hasta la siguiente nota de su f
   assert.deepEqual(legato.events[20], [['C', `${40 * TICKS_PER_UNIT}i`, 0.7]], 'hasta el tresillo del compás siguiente');
 });
 
-test('intensidades: sin ellas todo igual; con ellas, tres niveles', () => {
-  const cells = { C: { 0: 1, 12: 2, 24: 3 } };
-  assert.deepEqual(Object.values(compile(pattern({ cells })).events).map((e) => e[0][2]), [0.7, 0.7, 0.7]);
-  assert.deepEqual(Object.values(compile(pattern({ cells, dynamics: true })).events).map((e) => e[0][2]),
-    [LEVEL_VELOCITY[1], LEVEL_VELOCITY[2], LEVEL_VELOCITY[3]]);
+test('todas las notas con la misma intensidad', () => {
+  const cells = { C: { 0: 1, 12: 1, 24: 1 } };
+  assert.deepEqual(Object.values(compile(pattern({ cells })).events).map((e) => e[0][2]), [VELOCITY, VELOCITY, VELOCITY]);
 });
 
 test('filas: notas del acorde, bajo y grados de la escala en los dos registros', () => {
@@ -62,14 +60,14 @@ test('filas: notas del acorde, bajo y grados de la escala en los dos registros',
 });
 
 test('cambiar la subdivisión lleva cada nota a la casilla más cercana', () => {
-  const p = pattern({ cells: { C: { 0: 2, 3: 1, 6: 3, 9: 2 }, B: { 12: 2 } } });
+  const p = pattern({ cells: { C: { 0: 1, 3: 1, 6: 1, 9: 1 }, B: { 12: 1 } } });
   setSubdivision(p, 0, 3); // semicorcheas → tresillo: 0, 4, 8
-  // 3 → 4; 6 está justo entre 4 y 8 y va a la de después; 9 → 8 (en 8 se queda la más fuerte).
-  assert.deepEqual(p.cells.C, { 0: 2, 4: 1, 8: 3 });
+  // 3 → 4; 6 está justo entre 4 y 8 y va a la de después; 9 → 8 (las dos quedan en una).
+  assert.deepEqual(p.cells.C, { 0: 1, 4: 1, 8: 1 });
   assert.deepEqual(p.subdivisions, [3, 4, 4, 4]);
-  assert.deepEqual(p.cells.B, { 12: 2 }, 'los otros pulsos no cambian');
+  assert.deepEqual(p.cells.B, { 12: 1 }, 'los otros pulsos no cambian');
   setSubdivision(p, 0, 1);
-  assert.deepEqual(p.cells.C, { 0: 3 });
+  assert.deepEqual(p.cells.C, { 0: 1 });
 });
 
 test('compás ternario con subdivisiones distintas', () => {
@@ -101,9 +99,9 @@ test('patrones de la fase 5 se convierten sin perder notas', () => {
     registers: { e9: 'low', e10: 'mid' } };
   const [p] = sanitizePatterns([migrateV1(v1)]);
   assert.deepEqual(p.subdivisions, [4, 4, 4, 4]);
-  assert.deepEqual(p.cells, { C: { 12: 2, 36: 2 }, B: { 0: 3 }, l3: { 24: 1 }, l5: { 30: 2 }, l6: { 42: 2 }, m7: { 45: 1 } });
+  assert.deepEqual(p.cells, { C: { 12: 1, 36: 1 }, B: { 0: 1 }, l3: { 24: 1 }, l5: { 30: 1 }, l6: { 42: 1 }, m7: { 45: 1 } }, 'las intensidades quedan en casillas encendidas');
   const v68 = migrateV1({ id: 'uold2', name: 'x', meter: '6/8', cells: { B: { 0: 2, 4: 2 } } });
-  assert.deepEqual(v68.cells.B, { 0: 2, 16: 2 }, 'en 6/8 cada corchea son 4 unidades');
+  assert.deepEqual(v68.cells.B, { 0: 1, 16: 1 }, 'en 6/8 cada corchea son 4 unidades');
 });
 
 test('los patrones propios aparecen en la lista de su compás y con su nombre', () => {
@@ -125,7 +123,7 @@ test('validación de lo guardado: casillas fuera de su subdivisión, niveles y f
     { id: 'uxyz', meter: '5/4' },
   ]);
   assert.deepEqual(p.subdivisions, [3, 4, 4], 'una subdivisión no válida vuelve a semicorcheas');
-  assert.deepEqual(p.cells, { B: { 0: 3, 4: 2, 33: 2 }, l3: { 24: 2 } }, '6 no está en un tresillo; 36 se sale del compás');
+  assert.deepEqual(p.cells, { B: { 0: 1, 4: 1, 33: 1 }, l3: { 24: 1 } }, '6 no está en un tresillo; 36 se sale del compás');
   assert.equal(p.name, 'Groove');
   assert.equal(p.legato, false);
   assert.equal(sanitizePatterns('nada').length, 0);

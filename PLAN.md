@@ -124,7 +124,7 @@ El detalle de las notas de cada patrón está en el anexo A.
   - Filas del acorde: Acorde completo, Power chord y Nota 1 a Nota 5 del acorde (arpegio).
   - Fila del bajo del acorde (sigue la inversión si el ajuste está activado).
   - **Todas las notas de la escala** (cambio pedido tras probar la fase 5), en dos bloques: en el registro de las notas y en el bajo. Son los grados 1ª a 7ª contados desde la fundamental del acorde que suena, en la tonalidad elegida, para que las notas de paso no se salgan de la escala (sobre Rem en Do mayor, la 2ª es Mi). La 3ª, la 5ª y la 7ª (menor o mayor) siguen al acorde cuando el acorde las tiene (sobre Dom, la 3ª es Mi♭; sobre Sol7, la 7ª es Fa). Sustituyen a las filas fijas de la fase 5 (3ª y 5ª del bajo y notas extra 2ª, 4ª, 6ª, 7ª menor y 7ª mayor).
-- **Intensidad:** cada patrón elige si usa intensidades. Sin intensidades, todas las notas suenan igual. Con intensidades, cada casilla tiene tres niveles (suave, media o fuerte) que se cambian con clics sucesivos.
+- **Pincel:** se pulsa una casilla y se arrastra por las demás (en cualquier dirección, también entre filas). Si la primera casilla estaba vacía, el pincel pinta; si estaba llena, borra. Funciona con ratón y con el dedo; con el dedo, la rejilla se desplaza arrastrando sobre los nombres de las filas. Todas las notas suenan con la misma intensidad (el modo con intensidades se quitó).
 - **Duración:** un ajuste para todo el patrón, picado o ligado.
 - **Escucha:** mientras editas, el patrón suena en bucle con el acorde que elijas (por ejemplo, Do, Dom o Do7).
 - No se exportan ni se importan patrones en archivos.
@@ -158,7 +158,7 @@ El detalle de las notas de cada patrón está en el anexo A.
 - [x] **Puño de la mano derecha:** fader de volumen.
 - [x] **Patrones y compás:** cada compás tiene sus patrones (apartado 7).
 - [x] **Código ya escrito en la rama:** se empieza de cero. El código actual se borra al arrancar la fase 1.
-- [x] **Editor de patrones:** rejilla con filas extra, intensidad opcional y duración picado/ligado (apartado 7).
+- [x] **Editor de patrones:** rejilla con filas extra, pincel para pintar y borrar casillas y duración picado/ligado (apartado 7).
 
 ## 12. Fases de desarrollo
 
@@ -193,7 +193,7 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 - El editor se abre desde la configuración (sección de la mano derecha, «Editor de patrones»). Su selector de compás es el mismo compás de la app.
 - Mientras el editor está abierto, los gestos no cambian lo que suena (para poder escuchar el patrón en bucle).
 - Los patrones propios se guardan aparte de los ajustes. Al borrar uno, los gestos que lo tocaban pasan al bloque sostenido.
-- Al duplicar un patrón de fábrica se conservan todas sus notas. Las duraciones pasan a «ligado» (cada nota hasta la siguiente de su fila) y las intensidades, a los tres niveles.
+- Al duplicar un patrón de fábrica se conservan todas sus notas. Las duraciones pasan a «ligado» (cada nota hasta la siguiente de su fila) y los acentos del original se pierden (todas las notas con la misma intensidad).
 
 **Notas de la fase 4**
 - Rejilla del reloj: semicorcheas en 2/4, 3/4 y 4/4; corcheas en 3/8, 6/8, 9/8 y 12/8. La lógica de cuándo entra un cambio está en `docs/js/music/timing.js`, con pruebas propias.

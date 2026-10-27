@@ -27,10 +27,10 @@ test('nuevo patrón: se dibuja en la rejilla, se asigna a un gesto, suena y se g
     assert.ok(await page.isHidden('#edReadonlyHint'));
     await page.fill('#edName', 'Mi groove');
     await page.click(cell('B', 0)); // justo después de escribir el nombre: el clic no se debe perder
-    assert.match(await page.getAttribute(cell('B', 0), 'class'), /level-2/);
+    assert.match(await page.getAttribute(cell('B', 0), 'class'), /\bon\b/);
     for (const u of [12, 24, 36]) await page.click(cell('C', u));
     await page.click('[data-ed-legato="true"]');
-    assert.match(await page.getAttribute(cell('C', 12), 'class'), /level-2/);
+    assert.match(await page.getAttribute(cell('C', 12), 'class'), /\bon\b/);
     assert.match(await page.textContent('#edPattern'), /★ Mi groove/);
     await page.screenshot({ path: path.join(SHOTS, 'editor.png') });
     await page.click('#editorDialog .dialog-head button');
@@ -57,7 +57,7 @@ test('nuevo patrón: se dibuja en la rejilla, se asigna a un gesto, suena y se g
   }
 });
 
-test('duplicar uno de fábrica, intensidades con clics sucesivos y escuchar con Dom', async () => {
+test('duplicar uno de fábrica, pintar y borrar con el pincel y escuchar con Dom', async () => {
   const app = await openApp();
   try {
     const { page } = app;
@@ -65,15 +65,52 @@ test('duplicar uno de fábrica, intensidades con clics sucesivos y escuchar con 
     await page.selectOption('#edPattern', 'pop');
     await page.click('#edDuplicate');
     assert.match(await page.inputValue('#edName'), /Rasgueo pop \(copia\)/);
-    assert.match(await page.getAttribute(cell('B', 0), 'class'), /level-3/, 'el bajo del 1 fuerte, como en el original');
+    assert.match(await page.getAttribute(cell('B', 0), 'class'), /\bon\b/, 'el bajo del 1, como en el original');
+    assert.equal(await page.locator('[data-ed-dynamics]').count(), 0, 'ya no hay intensidades');
 
-    // Con intensidades: apagada → media → fuerte → suave → apagada.
-    const levels = [];
-    for (let i = 0; i < 4; i++) {
-      await page.click(cell('l6', 6));
-      levels.push((await page.getAttribute(cell('l6', 6), 'class')).match(/level-(\d)/)[1]);
-    }
-    assert.deepEqual(levels, ['2', '3', '1', '0']);
+    // Pincel con el ratón: se pulsa una casilla vacía y se arrastra en diagonal por otras filas.
+    const center = async (sel) => {
+      const b = await page.locator(sel).boundingBox();
+      return [b.x + b.width / 2, b.y + b.height / 2];
+    };
+    const drag = async (cells) => {
+      await page.locator(cells[0]).scrollIntoViewIfNeeded();
+      const points = await Promise.all(cells.map(center));
+      await page.mouse.move(...points[0]);
+      await page.mouse.down();
+      for (const p of points.slice(1)) await page.mouse.move(...p, { steps: 4 });
+      await page.mouse.up();
+    };
+    const isOn = async (row, unit) => /\bon\b/.test(await page.getAttribute(cell(row, unit), 'class'));
+    assert.equal(await isOn('l6', 3), false);
+    await drag([cell('l6', 3), cell('l6', 6), cell('l6', 9), cell('l7', 9)]);
+    for (const [r, u] of [['l6', 3], ['l6', 6], ['l6', 9], ['l7', 9]]) assert.ok(await isOn(r, u), `pintada ${r}@${u}`);
+    // Empezando en una casilla llena, el pincel borra (aunque pase por casillas vacías, no las pinta).
+    await drag([cell('l6', 6), cell('l6', 9), cell('l6', 15)]);
+    assert.equal(await isOn('l6', 6), false);
+    assert.equal(await isOn('l6', 9), false);
+    assert.equal(await isOn('l6', 15), false);
+    assert.ok(await isOn('l6', 3), 'la casilla anterior sigue pintada');
+    // Se guarda al momento.
+    const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('acordes-con-las-manos:patrones-v2')).at(-1).cells);
+    assert.deepEqual(saved.l6, { 3: 1 });
+    assert.deepEqual(saved.l7, { 9: 1 });
+
+    // Con el dedo: el navegador manda los movimientos a la primera casilla; aun así pinta las de debajo.
+    await page.locator(cell('m2', 0)).scrollIntoViewIfNeeded();
+    await page.evaluate(([a, b]) => {
+      const fire = (type, el, target = el) => {
+        const r = el.getBoundingClientRect();
+        target.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: 'touch', isPrimary: true, button: type === 'pointermove' ? -1 : 0,
+          clientX: r.x + r.width / 2, clientY: r.y + r.height / 2 }));
+      };
+      const first = document.querySelector(a);
+      fire('pointerdown', first);
+      fire('pointermove', document.querySelector(b), first);
+      fire('pointerup', document.querySelector(b), first);
+    }, [cell('m2', 0), cell('m2', 3)]);
+    assert.ok(await isOn('m2', 0));
+    assert.ok(await isOn('m2', 3));
 
     // Escuchar con Dom: suena la tercera menor (Mi♭3).
     await page.click(cell('m3', 3)); // 3ª de la escala (sigue al acorde) en la 2ª semicorchea
@@ -129,8 +166,8 @@ test('subdivisión por pulso: un tresillo en el 2º pulso suena en su sitio', as
     await page.click('#edPlay');
     // Cambiar la subdivisión con notas: van a la casilla más cercana.
     await page.selectOption('#edGrid select[data-subdiv="1"]', '2');
-    assert.match(await page.getAttribute(cell('B', 12), 'class'), /level-2/);
-    assert.match(await page.getAttribute(cell('B', 18), 'class'), /level-2/);
+    assert.match(await page.getAttribute(cell('B', 12), 'class'), /\bon\b/);
+    assert.match(await page.getAttribute(cell('B', 18), 'class'), /\bon\b/);
     await page.screenshot({ path: path.join(SHOTS, 'editor-subdivisiones.png') });
     assert.deepEqual(app.errors, []);
   } finally {
@@ -170,9 +207,9 @@ test('los patrones de la versión anterior aparecen convertidos y el original no
     await page.reload();
     await openEditor(page);
     await page.selectOption('#edPattern', { label: '★ Viejo' });
-    assert.match(await page.getAttribute(cell('B', 0), 'class'), /level-2/);
-    assert.match(await page.getAttribute(cell('C', 12), 'class'), /level-2/);
-    assert.match(await page.getAttribute(cell('m6', 24), 'class'), /level-2/, '6ª en registro medio → escala 6ª');
+    assert.match(await page.getAttribute(cell('B', 0), 'class'), /\bon\b/);
+    assert.match(await page.getAttribute(cell('C', 12), 'class'), /\bon\b/);
+    assert.match(await page.getAttribute(cell('m6', 24), 'class'), /\bon\b/, '6ª en registro medio → escala 6ª');
     await page.click(cell('C', 36)); // un cambio: se guarda en el formato nuevo
     const stored = await page.evaluate(() => ({
       v1: localStorage.getItem('acordes-con-las-manos:patrones'),
