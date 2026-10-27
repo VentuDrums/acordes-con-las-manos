@@ -54,6 +54,14 @@
         </div>
       </div>
 
+      <section class="panel sound-quick" id="soundPanel">
+        <h2 data-i18n="soundSection"></h2>
+        <div class="fields">
+          <label><span data-i18n="chordSound"></span> <select data-sound-select="chord"></select></label>
+          <label><span data-i18n="bassSound"></span> <select data-sound-select="bass"></select></label>
+        </div>
+      </section>
+
       <section class="panel legend" id="legendPanel">
         <h2 id="legendTitle"></h2>
         <p class="hint" data-i18n="legendHint"></p>
@@ -162,6 +170,16 @@
       </div>
       <ul id="rightMapList"></ul>
       <button id="openEditorBtn" class="primary-soft">🎛️ <span data-i18n="patternEditor"></span></button>
+    </section>
+
+    <section class="panel">
+      <h3 data-i18n="soundSection"></h3>
+      <div class="fields">
+        <label><span data-i18n="chordSound"></span> <select id="soundSelect" data-sound-select="chord"></select></label>
+        <label><span data-i18n="bassSound"></span> <select id="bassSoundSelect" data-sound-select="bass"></select></label>
+        <label><span data-i18n="bassVolume"></span> <input type="range" id="bassVolumeRange" min="0" max="1" step="0.05"></label>
+      </div>
+      <p class="hint" data-i18n="soundHelp"></p>
     </section>
 
     <section class="panel">

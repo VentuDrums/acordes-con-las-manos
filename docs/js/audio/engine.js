@@ -4,13 +4,18 @@
 // timing.js). En cada unidad:
 //   - aplica el cambio de acorde que estuviera esperando a ese pulso o compás,
 //   - toca el click del metrónomo en cada pulso (y durante la cuenta previa),
-//   - toca las notas del patrón rítmico con un piano de muestras grabadas.
-// El bloque sostenido no usa la rejilla: el acorde suena con un pad mientras no cambie.
+//   - toca las notas del patrón rítmico.
+// El bloque sostenido no usa la rejilla: el acorde suena mientras no cambie (con un instrumento que se
+// apaga solo, como el piano, se toca una vez y se deja sonar).
+//
+// Hay dos instrumentos (ver instruments.js): el del acorde y el del bajo. Cada evento del patrón va a
+// uno u otro (partOf). El bajo tiene su propio volumen.
 //
 // Cambio «al momento»: lo que aún suena (o está a punto de sonar) del acorde anterior se corta y el
 // acorde nuevo entra en ese momento con el resto de la duración de cada nota.
 /* global Tone */
-import { PATTERNS, notesForEvent, notesForStep } from '../music/patterns.js';
+import { PATTERNS, notesForEvent, notesForStep, partOf } from '../music/patterns.js';
+import { SOUNDS, BASS_SOUNDS, sampleSets, loadSamples, createInstrument, disposeLater } from './instruments.js';
 import { METERS, unitsPerQuarter, quarterBpm, stepOf, planChange, lateUnits } from '../music/timing.js';
 
 const MAX_LOG = 400;
@@ -21,12 +26,9 @@ const MIN_REMAINING = 0.06;
 
 const unique = (notes) => [...new Set(notes)];
 const allNotes = (voicing) => unique([voicing.bass, ...voicing.notes]);
-
-// Una muestra de piano cada tres semitonos; Tone.Sampler calcula las notas intermedias.
-const PIANO_URLS = Object.fromEntries(
-  [2, 3, 4, 5, 6].flatMap((o) => [['C', 'C'], ['D#', 'Ds'], ['F#', 'Fs'], ['A', 'A']]
-    .map(([note, file]) => [`${note}${o}`, `${file}${o}.mp3`])).concat([['C7', 'C7.mp3']]),
-);
+// Volumen del bajo (0…1) → ganancia: 0,7 deja el bajo como viene de fábrica (≈1); 1 lo duplica.
+const bassGain = (v) => 2 * v ** 2;
+const PARTS = ['chord', 'bass'];
 
 export class AudioEngine {
   constructor() {
@@ -45,9 +47,15 @@ export class AudioEngine {
     this.countInUntil = null; // unidad en la que acaba la cuenta previa
     this.phase = 0; // unidad en la que empieza el compás
     this.lastScheduled = -1; // última unidad preparada por el reloj
-    this.held = []; // notas que mantiene el pad
-    this.active = []; // notas del patrón que suenan o van a sonar: { what, notes, start, end, velocity, unit, step }
+    this.held = { chord: [], bass: [] }; // notas que mantiene el bloque sostenido
+    this.active = []; // notas del patrón que suenan o van a sonar: { what, part, notes, start, end, velocity, unit, step }
     this.volume = 0.8;
+    this.sound = 'piano'; // instrumento del acorde (SOUNDS)
+    this.bassSound = 'same'; // instrumento del bajo (BASS_SOUNDS)
+    this.bassVolume = 0.7;
+    this.voices = { chord: null, bass: null }; // instrumentos creados (ver createInstrument)
+    this.buffers = {}; // muestras ya cargadas: { carpeta: ToneAudioBuffers }
+    this.onLoadingChange = null; // () → empiezan a cargar las muestras o termina de cargar un instrumento
     this.onBeat = null; // (pulso, pulsos por compás, cuenta previa) → para pintar el pulso en pantalla
     this.onApplied = null; // () → el cambio de acorde que esperaba ya suena
     // Registros de lo que suena, para poder comprobarlo en los tests.
@@ -61,30 +69,23 @@ export class AudioEngine {
     await Tone.start();
     Tone.context.lookAhead = LOOK_AHEAD;
     this.out = new Tone.Gain(this.volume ** 2).toDestination();
-    const reverb = new Tone.Reverb({ decay: 3, wet: 0.25 }).connect(this.out);
-    const padFilter = new Tone.Filter(1800, 'lowpass').connect(reverb);
-    this.pad = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'fatsawtooth', count: 3, spread: 20 },
-      envelope: { attack: 0.15, decay: 0.3, sustain: 0.8, release: 1.2 },
-      volume: -20,
-    }).connect(padFilter);
-    // Teclado sintetizado: solo se usa mientras carga el piano.
-    this.keys = new Tone.PolySynth(Tone.FMSynth, {
-      harmonicity: 3,
-      modulationIndex: 2.5,
-      envelope: { attack: 0.005, decay: 0.9, sustain: 0.25, release: 0.8 },
-      modulationEnvelope: { attack: 0.005, decay: 0.4, sustain: 0.1, release: 0.5 },
-      volume: -14,
-    }).connect(reverb);
-    this.keys.maxPolyphony = 48;
-    this.pianoLoaded = false;
-    this.piano = new Tone.Sampler({
-      urls: PIANO_URLS,
-      baseUrl: 'audio/piano/',
-      release: 0.6,
-      volume: -4,
-      onload: () => { this.pianoLoaded = true; },
-    }).connect(reverb);
+    this.chordOut = new Tone.Reverb({ decay: 3, wet: 0.25 }).connect(this.out);
+    this.bassOut = new Tone.Gain(bassGain(this.bassVolume)).connect(this.out);
+    // Se cargan todas las muestras al empezar (las elegidas primero): luego cambiar de instrumento
+    // es inmediato. Mientras tanto suena un sustituto sintetizado.
+    const sets = Object.entries(sampleSets());
+    const chosen = [SOUNDS[this.sound], BASS_SOUNDS[this.bassSound]].map((d) => d.samples?.dir);
+    sets.sort(([a], [b]) => chosen.includes(b) - chosen.includes(a));
+    for (const [dir, notes] of sets) {
+      const buffers = loadSamples(dir, notes, () => {
+        this.buffers[dir] = buffers;
+        // Los instrumentos que esperaban estas muestras pasan a sonar con ellas.
+        for (const part of PARTS) if (this.voices[part]?.waiting === dir) this.buildVoice(part);
+        this.onLoadingChange?.();
+      });
+    }
+    this.buildVoice('chord');
+    this.buildVoice('bass');
     // El metrónomo va aparte: el fader de volumen no le afecta.
     this.clickOut = new Tone.Gain(this.metronomeVolume).toDestination();
     this.click = new Tone.Synth({
@@ -94,6 +95,7 @@ export class AudioEngine {
     }).connect(this.clickOut);
     this.ready = true;
     this.startClock();
+    this.onLoadingChange?.();
   }
 
   // Ajustes de tiempo: { meter, bpm, changeMode, restartOnChange, metronome, metronomeVolume, countIn }.
@@ -185,7 +187,7 @@ export class AudioEngine {
     }
     this.voicing = voicing;
     this.label = label;
-    if (PATTERNS[this.pattern].sustain) this.hold(allNotes(voicing));
+    if (PATTERNS[this.pattern].sustain) this.hold(voicing);
     this.record({ type: 'chord', label, notes: allNotes(voicing), unit: Math.floor(this.unitAt(Tone.immediate())) });
   }
 
@@ -193,9 +195,9 @@ export class AudioEngine {
     if (id === this.pattern) return;
     this.pattern = id;
     if (!this.ready) return;
-    if (PATTERNS[id].sustain && this.voicing) this.hold(allNotes(this.voicing));
+    if (PATTERNS[id].sustain && this.voicing) this.hold(this.voicing);
     else {
-      this.hold([]);
+      this.hold(null);
       this.catchUp();
     }
   }
@@ -208,12 +210,7 @@ export class AudioEngine {
     const unit = Math.floor(this.unitAt(now));
     if (unit > this.lastScheduled || this.unitAt(now) - unit > lateUnits(this.meter)) return;
     const step = stepOf(unit, this.phase, this.meter);
-    for (const ev of notesForStep(this.pattern, step, this.voicing)) {
-      const duration = Tone.Time(ev.duration).toSeconds();
-      this.instrument().triggerAttackRelease(this.toNotes(ev.notes), duration, now, ev.velocity);
-      this.active.push({ what: ev.what, notes: ev.notes, start: now, end: now + duration, velocity: ev.velocity, unit, step });
-      this.logNote({ unit, step, notes: ev.notes, kind: 'catchup' });
-    }
+    for (const ev of notesForStep(this.pattern, step, this.voicing)) this.play(ev, now, unit, step, 'catchup');
   }
 
   silence() {
@@ -222,11 +219,10 @@ export class AudioEngine {
     this.voicing = null;
     this.pending = null;
     this.countInUntil = null;
-    this.hold([]);
+    this.hold(null);
     const now = Tone.immediate();
     this.cutActive(now);
-    this.keys.releaseAll(now);
-    this.piano.releaseAll(now);
+    for (const part of PARTS) this.voices[part]?.inst.releaseAll(now);
     if (wasPlaying) this.record({ type: 'silence' });
   }
 
@@ -236,27 +232,97 @@ export class AudioEngine {
     if (this.ready) this.out.gain.rampTo(volume ** 2, 0.05);
   }
 
-  instrument() {
-    return this.pianoLoaded ? this.piano : this.keys;
+  // Instrumentos: { sound, bassSound, bassVolume }.
+  setSounds({ sound, bassSound, bassVolume }) {
+    const chordChanged = sound !== this.sound;
+    const bassChanged = chordChanged || bassSound !== this.bassSound; // 'same' sigue al acorde
+    Object.assign(this, { sound, bassSound, bassVolume });
+    if (!this.ready) return;
+    this.bassOut.gain.rampTo(bassGain(bassVolume), 0.05);
+    if (chordChanged) this.buildVoice('chord');
+    if (bassChanged) this.buildVoice('bass');
   }
 
-  // Mantiene en el pad exactamente estas notas. Las comunes con las que sonaban no se repiten.
+  // (Re)crea el instrumento de una parte. Lo que sonaba con el anterior se apaga y, en el bloque
+  // sostenido, el acorde vuelve a sonar con el nuevo.
+  buildVoice(part) {
+    const now = Tone.immediate();
+    this.cutActive(now, part);
+    const old = this.voices[part];
+    if (old) {
+      old.inst.releaseAll(now);
+      disposeLater(old);
+    }
+    this.held[part] = [];
+    const out = part === 'chord' ? this.chordOut : this.bassOut;
+    const bass = BASS_SOUNDS[this.bassSound];
+    if (part === 'chord') this.voices.chord = createInstrument(SOUNDS, this.sound, out, this.buffers, 'chord');
+    else if (bass.none) this.voices.bass = null;
+    // «El mismo que el acorde»: otro ejemplar del instrumento del acorde, para que el bajo tenga su volumen.
+    else if (bass.same) this.voices.bass = createInstrument(SOUNDS, this.sound, out, this.buffers, 'chord');
+    else this.voices.bass = createInstrument(BASS_SOUNDS, this.bassSound, out, this.buffers, 'bass');
+    if (this.voicing && PATTERNS[this.pattern].sustain) this.holdPart(part, this.voicing, now);
+  }
+
+  get pianoLoaded() {
+    return Boolean(this.buffers.piano);
+  }
+
+  // ¿Están cargadas las muestras de este instrumento? (los sintetizados siempre lo están)
+  isLoaded(id) {
+    const def = SOUNDS[id] ?? BASS_SOUNDS[id];
+    return !def?.samples || Boolean(this.buffers[def.samples.dir]);
+  }
+
+  // Voces que suenan en los instrumentos sintetizados (para los tests).
+  activeVoices() {
+    return PARTS.reduce((n, part) => n + (this.voices[part]?.inst.activeVoices ?? 0), 0);
+  }
+
+  // Bloque sostenido: mantiene sonando exactamente este acorde (o nada, con null).
   // Tone.immediate() ejecuta al momento: con Tone.now() (que añade un margen) una orden de soltar
   // que llega justo después de tocar podía adelantarse y dejar notas colgadas.
-  hold(notes, time = Tone.immediate()) {
-    const off = this.held.filter((m) => !notes.includes(m));
-    const on = notes.filter((m) => !this.held.includes(m));
-    if (off.length) this.pad.triggerRelease(this.toNotes(off), time);
-    if (on.length) this.pad.triggerAttack(this.toNotes(on), time, 0.7);
-    this.held = [...notes];
+  hold(voicing, time = Tone.immediate()) {
+    for (const part of PARTS) this.holdPart(part, voicing, time);
   }
 
-  // Corta (en `time`) las notas del patrón que suenan o van a sonar.
-  cutActive(time) {
+  // Con un instrumento que se mantiene (pad, órgano…), las notas comunes con el acorde anterior no se
+  // repiten. Con uno que se apaga solo (piano, guitarra…), el acorde nuevo se toca entero.
+  holdPart(part, voicing, time) {
+    const voice = this.voices[part];
+    const notes = !voicing ? [] : part === 'chord' ? voicing.notes : [voicing.bass];
+    const held = this.held[part];
+    this.held[part] = voice ? [...notes] : [];
+    if (!voice || (held.length === notes.length && held.every((m) => notes.includes(m)))) return;
+    const off = voice.sustain ? held.filter((m) => !notes.includes(m)) : held;
+    const on = voice.sustain ? notes.filter((m) => !held.includes(m)) : notes;
+    if (off.length) voice.inst.triggerRelease(this.toNotes(off), time);
+    if (on.length) voice.inst.triggerAttack(this.toNotes(on), time, 0.7);
+  }
+
+  // Toca un evento del patrón (si su parte suena) y lo apunta en las notas activas.
+  play(ev, time, unit, step, kind) {
+    const part = partOf(ev.what);
+    const voice = this.voices[part];
+    if (!voice) return;
+    const duration = Tone.Time(ev.duration).toSeconds();
+    voice.inst.triggerAttackRelease(this.toNotes(ev.notes), duration, time, ev.velocity);
+    this.active.push({ what: ev.what, part, notes: ev.notes, start: time, end: time + duration, velocity: ev.velocity, unit, step });
+    this.logNote({ unit, step, notes: ev.notes, kind, part, instrument: voice.playing });
+  }
+
+  // Corta (en `time`) las notas del patrón que suenan o van a sonar (de una parte o de todas).
+  cutActive(time, part = null) {
+    const kept = [];
     for (const ev of this.active) {
-      if (ev.end > time) this.instrument().triggerRelease(this.toNotes(ev.notes), Math.max(time, ev.start + 0.003));
+      if (part && ev.part !== part) {
+        kept.push(ev);
+        continue;
+      }
+      const voice = this.voices[ev.part];
+      if (voice && ev.end > time) voice.inst.triggerRelease(this.toNotes(ev.notes), Math.max(time, ev.start + 0.003));
     }
-    this.active = [];
+    this.active = kept;
   }
 
   // Cambio al momento: cada nota del patrón que suena o va a sonar con el acorde anterior pasa al
@@ -270,10 +336,12 @@ export class AudioEngine {
       const from = Math.max(now, ev.start);
       const off = ev.notes.filter((n) => !notes.includes(n));
       const on = notes.filter((n) => !ev.notes.includes(n));
-      if (off.length) this.instrument().triggerRelease(this.toNotes(off), ev.start > now ? ev.start + 0.003 : now);
+      const voice = this.voices[ev.part];
+      if (!voice) continue;
+      if (off.length) voice.inst.triggerRelease(this.toNotes(off), ev.start > now ? ev.start + 0.003 : now);
       if (on.length && ev.end - from > MIN_REMAINING) {
-        this.instrument().triggerAttackRelease(this.toNotes(on), ev.end - from, from, ev.velocity);
-        this.logNote({ unit: ev.unit, step: ev.step, notes: on, kind: 'replace' });
+        voice.inst.triggerAttackRelease(this.toNotes(on), ev.end - from, from, ev.velocity);
+        this.logNote({ unit: ev.unit, step: ev.step, notes: on, kind: 'replace', part: ev.part, instrument: voice.playing });
       }
       kept.push({ ...ev, notes });
     }
@@ -295,7 +363,7 @@ export class AudioEngine {
       this.cutActive(time);
       this.voicing = voicing;
       this.label = label;
-      if (PATTERNS[this.pattern].sustain) this.hold(allNotes(voicing), time);
+      if (PATTERNS[this.pattern].sustain) this.hold(voicing, time);
       this.record({ type: 'chord', label, notes: allNotes(voicing), unit });
       Tone.Draw.schedule(() => this.onApplied?.(), time);
     }
@@ -313,12 +381,7 @@ export class AudioEngine {
     }
 
     if (!this.voicing || PATTERNS[this.pattern].sustain) return;
-    for (const ev of notesForStep(this.pattern, step, this.voicing)) {
-      const duration = Tone.Time(ev.duration).toSeconds();
-      this.instrument().triggerAttackRelease(this.toNotes(ev.notes), duration, time, ev.velocity);
-      this.active.push({ what: ev.what, notes: ev.notes, start: time, end: time + duration, velocity: ev.velocity, unit, step });
-      this.logNote({ unit, step, notes: ev.notes, kind: 'note' });
-    }
+    for (const ev of notesForStep(this.pattern, step, this.voicing)) this.play(ev, time, unit, step, 'note');
   }
 
   toNotes(midiNotes) {
@@ -326,7 +389,7 @@ export class AudioEngine {
   }
 
   logNote(entry) {
-    this.noteLog.push({ ...entry, instrument: this.pianoLoaded ? 'piano' : 'keys', at: performance.now() });
+    this.noteLog.push({ ...entry, at: performance.now() });
     if (this.noteLog.length > MAX_LOG) this.noteLog.shift();
   }
 

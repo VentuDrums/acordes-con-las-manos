@@ -281,7 +281,8 @@ test('cuenta previa: un compás de clicks y el acorde entra en el siguiente', as
     assert.equal(countClicks[0].step, 0);
     assert.equal(log.find((e) => e.label === 'Do').unit, countClicks[0].unit + 48, 'el acorde entra un compás después');
     assert.ok(!clicks.some((c) => !c.countIn), 'fuera de la cuenta no hay clicks (click desactivado)');
-    assert.ok(await page.isHidden('#countIn'));
+    // La cuenta se oculta cuando el acorde suena de verdad (unos milisegundos después de prepararse).
+    await page.waitForSelector('#countIn', { state: 'hidden', timeout: 1000 });
     assert.deepEqual(app.errors, []);
   } finally {
     await app.close();

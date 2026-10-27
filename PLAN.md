@@ -131,9 +131,13 @@ El detalle de las notas de cada patrón está en el anexo A.
 
 ## 8. Sonido
 
-- **Instrumentos iniciales:** piano, pad y pluck.
-- El código se organiza para añadir instrumentos nuevos fácilmente.
-- Volumen general.
+- **Instrumentos del acorde:** piano, piano eléctrico, órgano, pad, guitarra acústica, guitarra eléctrica, arpa y marimba.
+- **Instrumento del bajo, aparte:** el mismo que el acorde, bajo eléctrico, contrabajo, bajo de sintetizador o sin bajo. Tiene su propio volumen en la configuración.
+- Se eligen en la configuración y también en el panel «Sonido» de la pantalla principal.
+- **Bloque sostenido:** usa el instrumento elegido. Los que se apagan solos (piano, guitarras, arpa, marimba, piano eléctrico) tocan el acorde una vez y lo dejan sonar; el pad y el órgano lo mantienen.
+- **Carga:** todas las muestras grabadas se descargan al empezar (las elegidas primero, unos 4,6 MB en total), así que después cambiar de instrumento es inmediato. Mientras cargan suena un sustituto sintetizado y el selector lo indica con «(cargando…)».
+- El código se organiza para añadir instrumentos nuevos fácilmente: una entrada en `docs/js/audio/instruments.js` y su nombre en `i18n.js`.
+- Volumen general (fader de la mano derecha).
 
 ## 9. Salida MIDI (para FL Studio en Windows)
 
@@ -172,7 +176,7 @@ Cada fase termina con algo que se puede probar y enseñar.
 3. **Mano derecha:** modos inversión y ritmo, con la tabla editable, y fader de volumen. Para que el modo ritmo se pueda probar ya, esta fase incluye los patrones de fábrica de 4/4 y el tempo ajustable.
 4. **Tiempo:** el resto de compases y sus patrones, cuantización, metrónomo, cuenta previa y la opción de reiniciar el patrón al cambiar de acorde.
 5. **Editor de patrones.**
-6. **Sonidos:** piano, pad y pluck.
+6. **Sonidos:** instrumentos del acorde y del bajo (apartado 8).
 7. **MIDI:** salida a FL Studio a través de loopMIDI.
 8. **Idiomas y pantalla de inicio:** español e inglés, y elección de notación.
 9. **Publicación final:** prueba con usuarios reales y material para el máster.
@@ -182,6 +186,15 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 **Notas de la fase 1**
 - Los umbrales del reconocimiento de dedos se ajustaron con unas 120 fotos de manos reales: acierta el 92 %. Las que fallan están de canto o del dorso; tocando con la palma de frente funciona mucho mejor.
 - Los gestos 3 dedos, 4 dedos, 🤙 y 🤘 no tienen fotos reales de prueba: solo están comprobados con manos simuladas. Hay que verificarlos con manos de verdad.
+
+**Notas de la fase 6**
+- El «pluck» de la propuesta inicial se sustituyó por guitarra acústica y marimba (y se añadieron piano eléctrico, órgano, guitarra eléctrica y arpa).
+- Muestras grabadas: piano, guitarras, arpa, bajo eléctrico y contrabajo del proyecto tonejs-instruments (MIT); marimba del banco FluidR3_GM (CC-BY 3.0). Cada carpeta de `docs/audio` tiene su CREDITOS.md. Se comprobó la afinación de cada conjunto.
+- Piano eléctrico, órgano, pad y bajo de sintetizador son sintetizados (no descargan nada).
+- Los volúmenes se igualaron midiendo el nivel de salida de cada instrumento con el rasgueo pop (los que se mantienen, pad y órgano, quedan unos dB por debajo porque se perciben más fuertes).
+- Cada evento de los patrones es de una parte: bajo (bajo, quinta, tercera, notas de paso y grados de la escala en el bajo) o acorde (acorde, power chord, arpegio y grados en el registro medio).
+- La línea de información sobre la cámara termina con el instrumento del acorde.
+
 **Notas de la ampliación del editor**
 - Copia de seguridad de la versión anterior en la rama `version-fase-5` de GitHub.
 - El reloj avanza en doceavos de pulso (caben negras, corcheas, tresillos, semicorcheas y seisillos). Los patrones de fábrica siguen igual.
@@ -203,7 +216,7 @@ La app se publica en GitHub Pages desde la fase 1, para poder probar cada fase d
 
 **Notas de la fase 3**
 - Ritmos: un reloj de semicorcheas marca los pasos. Al cambiar de acorde o de patrón, el ritmo sigue cuadrado con el compás (comportamiento «seguir a tempo»; la opción de reiniciar llega en la fase 4).
-- El bloque sostenido suena con el pad; los patrones rítmicos, con un piano de muestras grabadas (`docs/audio/piano`, 1,6 MB, ver CREDITOS.md). El sonido de teclado sintetizado del principio era demasiado flojo; queda solo como reserva mientras carga el piano. La elección de sonido llega en la fase 6.
+- El bloque sostenido sonaba con el pad y los patrones rítmicos con un piano de muestras grabadas (`docs/audio/piano`, 1,6 MB, ver CREDITOS.md). El sonido de teclado sintetizado del principio era demasiado flojo; queda solo como reserva mientras cargan las muestras. Desde la fase 6 el instrumento se elige.
 - El modo de la mano derecha (inversión o ritmo) se cambia también desde el panel de debajo de la cámara; las tablas se editan en la configuración.
 - Fader: medio alto de la imagen de recorrido va de volumen 0 a máximo. El volumen se guarda.
 - En pantallas anchas la tabla de la mano derecha va debajo de la cámara para que todo quepa sin scroll en la tablet.

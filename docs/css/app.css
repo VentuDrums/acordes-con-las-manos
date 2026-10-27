@@ -286,3 +286,9 @@ body.calibrating .chord, body.calibrating .sound-info { display: none; }
 .tap-tempo { min-width: 9.5em; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
 .tap-tempo.tapped { animation: tap-flash 0.18s ease-out; }
 @keyframes tap-flash { from { background: var(--accent); color: #000; } }
+
+/* Panel rápido de sonido (bajo las manos). */
+.sound-quick h2 { margin-bottom: 6px; }
+.sound-quick .fields { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 10px; align-items: center; }
+.sound-quick label { display: contents; }
+.sound-quick select { width: 100%; }

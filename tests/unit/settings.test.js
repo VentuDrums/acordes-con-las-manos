@@ -59,3 +59,11 @@ test('rellenar el modo personalizado con la escala conserva el pulgar', () => {
   assert.deepEqual(custom.five, { root: 2, quality: '7' });
   assert.deepEqual(custom.thumb, DEFAULTS.custom.thumb);
 });
+
+test('sonidos: valores guardados válidos, y los desconocidos vuelven a los de fábrica', () => {
+  const ok = sanitize({ sound: 'marimba', bassSound: 'contrabass', bassVolume: 0.4 });
+  assert.deepEqual([ok.sound, ok.bassSound, ok.bassVolume], ['marimba', 'contrabass', 0.4]);
+  const bad = sanitize({ sound: 'theremin', bassSound: 'tuba', bassVolume: 3 });
+  assert.deepEqual([bad.sound, bad.bassSound, bad.bassVolume], [DEFAULTS.sound, DEFAULTS.bassSound, DEFAULTS.bassVolume]);
+  assert.deepEqual([DEFAULTS.sound, DEFAULTS.bassSound], ['piano', 'same']);
+});

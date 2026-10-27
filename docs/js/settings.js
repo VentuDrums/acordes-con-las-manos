@@ -3,6 +3,7 @@ import { SCALES, QUALITIES, INVERSIONS } from './music/theory.js';
 import { PATTERNS, patternsFor } from './music/patterns.js';
 import { METERS } from './music/timing.js';
 import { ASSIGNABLE } from './hands/gestures.js';
+import { SOUNDS, BASS_SOUNDS } from './audio/instruments.js';
 
 const STORAGE_KEY = 'acordes-con-las-manos:ajustes';
 
@@ -47,6 +48,10 @@ export const DEFAULTS = Object.freeze({
   patMaps: Object.fromEntries(Object.keys(METERS).map((m) => [m, defaultPatMap(m)])),
   bpm: 90,
   volume: 0.8,
+  // Instrumentos (ver audio/instruments.js). bassVolume: 0,7 deja el bajo como viene de fábrica.
+  sound: 'piano',
+  bassSound: 'same',
+  bassVolume: 0.7,
 
   meter: '4/4',
   // Modo libre (como en la fase 3): sin click, sin pulso en pantalla, sin cuenta previa y el acorde
@@ -108,6 +113,9 @@ export function sanitize(saved) {
     patMaps,
     bpm: bpm >= BPM_RANGE[0] && bpm <= BPM_RANGE[1] ? bpm : DEFAULTS.bpm,
     volume: pick(s.volume, isUnit, DEFAULTS.volume),
+    sound: pick(s.sound, (v) => Object.hasOwn(SOUNDS, v), DEFAULTS.sound),
+    bassSound: pick(s.bassSound, (v) => Object.hasOwn(BASS_SOUNDS, v), DEFAULTS.bassSound),
+    bassVolume: pick(s.bassVolume, isUnit, DEFAULTS.bassVolume),
     meter: pick(s.meter, (v) => Object.hasOwn(METERS, v), DEFAULTS.meter),
     changeMode: pick(s.changeMode, (v) => CHANGE_MODES.includes(v), DEFAULTS.changeMode),
     restartOnChange: pick(s.restartOnChange, isBool, DEFAULTS.restartOnChange),

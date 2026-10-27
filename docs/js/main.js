@@ -9,6 +9,7 @@ import { GESTURES, ASSIGNABLE, ABSENT, fingerStates, classify, GestureFilter } f
 import { VolumeFader, palmY } from './hands/fader.js';
 import { HandTracker } from './hands/tracker.js';
 import { AudioEngine } from './audio/engine.js';
+import { SOUNDS, BASS_SOUNDS } from './audio/instruments.js';
 import { drawStage } from './ui/stage.js';
 import { loadSettings, saveSettings, currentPattern, currentPatMap, engineTiming } from './settings.js';
 import { initSettingsPanel } from './ui/settings-panel.js';
@@ -62,6 +63,23 @@ function syncEngine() {
   // Mientras se escucha un patrón en el editor, suena ese y no el de la mano derecha.
   engine.setPattern(state.previewPattern ?? currentPattern(settings));
   engine.setVolume(settings.volume);
+  engine.setSounds({ sound: settings.sound, bassSound: settings.bassSound, bassVolume: settings.bassVolume });
+}
+
+// Selectores de instrumento (en la configuración y en el panel rápido). Los de muestras grabadas
+// que aún no han cargado lo indican.
+function renderSounds() {
+  const catalogs = { chord: [SOUNDS, settings.sound], bass: [BASS_SOUNDS, settings.bassSound] };
+  document.querySelectorAll('[data-sound-select]').forEach((select) => {
+    const [catalog, selected] = catalogs[select.dataset.soundSelect];
+    select.innerHTML = Object.keys(catalog).map((id) => {
+      const name = t(`sound_${id}`);
+      const label = engine.ready && !engine.isLoaded(id) ? t('loadingSound', { name }) : name;
+      return `<option value="${id}"${id === selected ? ' selected' : ''}>${label}</option>`;
+    }).join('');
+  });
+  $('#bassVolumeRange').value = settings.bassVolume;
+  $('#bassVolumeRange').disabled = settings.bassSound === 'none';
 }
 
 // Mientras se calibra o se edita un patrón, los gestos no cambian lo que suena.
@@ -99,6 +117,7 @@ function applyRight(g) {
 // Al cambiar los ajustes, el gesto que se está haciendo pasa a tocar su acorde nuevo.
 function onSettingsChange() {
   saveSettings(settings);
+  renderSounds();
   tracker.swap = settings.swapHands;
   syncEngine();
   renderLegend();
@@ -207,7 +226,7 @@ function renderRight() {
       <span class="emoji">${GESTURES[g]}</span><span class="label">${t(`gesture_${g}`)}</span><span class="what">${what}</span>
     </button></li>`;
   }).join('');
-  $('#soundInfo').textContent = `${settings.meter} · ${settings.bpm} ${t('bpmUnit')} · ${t(`inversion_${settings.inversion}`)} · ${patternLabel(pattern, t)}`;
+  $('#soundInfo').textContent = `${settings.meter} · ${settings.bpm} ${t('bpmUnit')} · ${t(`inversion_${settings.inversion}`)} · ${patternLabel(pattern, t)} · ${t(`sound_${settings.sound}`)}`;
   const withMetronome = settings.timeMode === 'metronome';
   $('#metronomeBtn').setAttribute('aria-pressed', withMetronome);
   $('#metronomeBtn').innerHTML = `<span aria-hidden="true">${withMetronome ? '🥁' : '🎶'}</span> `
@@ -321,6 +340,19 @@ $('#metronomeBtn').addEventListener('click', async () => {
   onSettingsChange();
 });
 engine.onBeat = renderBeat;
+engine.onLoadingChange = renderSounds;
+document.addEventListener('change', async (e) => {
+  const part = e.target.dataset?.soundSelect;
+  if (!part) return;
+  settings[part === 'chord' ? 'sound' : 'bassSound'] = e.target.value;
+  await engine.start();
+  onSettingsChange();
+});
+$('#bassVolumeRange').addEventListener('input', (e) => {
+  settings.bassVolume = Number(e.target.value);
+  saveSettings(settings);
+  syncEngine();
+});
 engine.onApplied = renderChord;
 // Cambio rápido de modo de la mano derecha desde la pantalla principal (las tablas se editan en la configuración).
 document.querySelectorAll('[data-quick-mode]').forEach((b) => b.addEventListener('click', () => {
@@ -346,6 +378,8 @@ $('#legend').addEventListener('click', async (e) => {
 translatePage();
 renderLegend();
 renderRight();
+renderSounds();
+syncEngine(); // el motor conoce los ajustes antes de arrancar (carga primero los sonidos elegidos)
 
 // Acceso para depurar y para los tests automáticos.
 window.acordes = { engine, state, filters, settings, calibration, fader, customPatterns };

@@ -173,6 +173,14 @@ export function registerPatterns(custom) {
 export const patternsFor = (meter) => Object.keys(PATTERNS).filter((id) => PATTERNS[id].meter === null || PATTERNS[id].meter === meter);
 
 // Notas MIDI de un evento con el acorde dado.
+// Parte que toca cada evento: 'bass' (bajo, quinta, tercera y notas de paso del bajo, grados de la
+// escala en el bajo) o 'chord' (acorde, power chord, notas del arpegio, grados en el registro medio).
+export function partOf(what) {
+  if (what === 'B' || what === 'F' || what === 'T') return 'bass';
+  if (typeof what === 'string' && (what[0] === 'x' || what[0] === 'l')) return 'bass';
+  return 'chord';
+}
+
 export function notesForEvent(what, voicing) {
   if (what === 'C') return voicing.notes;
   if (what === 'B') return [voicing.bass];
