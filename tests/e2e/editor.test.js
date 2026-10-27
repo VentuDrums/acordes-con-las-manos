@@ -93,6 +93,27 @@ test('duplicar uno de fábrica, intensidades con clics sucesivos y registro de l
   }
 });
 
+test('al editar mientras suena, sigue sonando el patrón que se edita (con el cambio)', async () => {
+  const app = await openApp();
+  try {
+    const { page } = app;
+    await openEditor(page);
+    await page.click('#edNew');
+    await page.click(cell('B', 0));
+    const id = await page.inputValue('#edPattern');
+    await page.click('#edPlay');
+    await page.waitForTimeout(500);
+    await page.click(cell('C', 8)); // cambio mientras suena
+    assert.equal(await page.evaluate(() => window.acordes.engine.pattern), id, 'el patrón que suena no cambia');
+    await page.waitForTimeout(3500);
+    const heard = await page.evaluate(() => window.acordes.engine.noteLog.filter((n) => n.notes.length === 3).length);
+    assert.ok(heard > 0, 'el acorde añadido se oye');
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.close();
+  }
+});
+
 test('borrar un patrón asignado: el gesto vuelve al bloque sostenido', async () => {
   const app = await openApp();
   try {

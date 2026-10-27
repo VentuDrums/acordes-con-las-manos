@@ -39,6 +39,7 @@ const state = {
   leftGesture: ABSENT,  // último gesto aplicado de la mano izquierda
   rightGesture: null,   // último gesto aplicado de la mano derecha
   playing: null,        // { chord, degree } que suena, o null en silencio
+  previewPattern: null, // patrón que se escucha en el editor de patrones
 };
 const fader = new VolumeFader(settings.volume);
 
@@ -55,7 +56,8 @@ function soundChord() {
 // Lleva al motor de sonido el patrón, el tempo y el volumen de los ajustes.
 function syncEngine() {
   engine.configure(engineTiming(settings));
-  engine.setPattern(currentPattern(settings));
+  // Mientras se escucha un patrón en el editor, suena ese y no el de la mano derecha.
+  engine.setPattern(state.previewPattern ?? currentPattern(settings));
   engine.setVolume(settings.volume);
 }
 
@@ -292,12 +294,13 @@ const editor = initPatternEditor({
   onChange: onSettingsChange,
   preview: async (id, chord) => {
     await engine.start();
+    state.previewPattern = id;
     syncEngine();
-    engine.setPattern(id);
     engine.playNow(voiceChord(chord, settings.inversion, settings.bassFollows), chord.name);
   },
   // Al dejar de escuchar vuelve lo que tocaban las manos.
   stopPreview: () => {
+    state.previewPattern = null;
     engine.silence();
     syncEngine();
     soundChord();
