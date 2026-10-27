@@ -5,6 +5,7 @@ import { patternsFor } from '../music/patterns.js';
 import { patternLabel } from '../music/custom-patterns.js';
 import { METERS } from '../music/timing.js';
 import { BPM_RANGE, currentPattern, currentPatMap } from '../settings.js';
+import { createTapTempo } from '../music/tap-tempo.js';
 import { customFromScale, spellingForChord } from '../music/left-hand.js';
 import { GESTURES, ASSIGNABLE } from '../hands/gestures.js';
 
@@ -45,7 +46,7 @@ export function initSettingsPanel({ settings, notation, onChange, onCalibrate })
   function renderTime() {
     $('#meterSelect').innerHTML = options(Object.keys(METERS).map((m) => [m, m]), settings.meter);
     Object.assign($('#bpmRange'), { min: BPM_RANGE[0], max: BPM_RANGE[1], step: 1, value: settings.bpm });
-    $('#bpmValue').textContent = `${settings.bpm} ${t('bpmUnit')}`;
+    Object.assign($('#bpmInput'), { min: BPM_RANGE[0], max: BPM_RANGE[1], step: 1, value: settings.bpm });
     document.querySelectorAll('[data-change-mode]').forEach((b) => {
       b.setAttribute('aria-pressed', b.dataset.changeMode === settings.changeMode);
     });
@@ -150,11 +151,51 @@ export function initSettingsPanel({ settings, notation, onChange, onCalibrate })
   $('#metronomeVolumeRange').addEventListener('input', (e) => { settings.metronomeVolume = Number(e.target.value); onChange(); });
   $('#countInCheck').addEventListener('change', (e) => { settings.countIn = e.target.checked; changed(); });
   $('#bassFollowsCheck').addEventListener('change', (e) => { settings.bassFollows = e.target.checked; changed(); });
-  $('#bpmRange').addEventListener('input', (e) => {
-    settings.bpm = Number(e.target.value);
-    $('#bpmValue').textContent = `${settings.bpm} ${t('bpmUnit')}`;
+  // Tempo: deslizador, número escrito con el teclado o marcado con toques. Los tres se mantienen
+  // iguales; no se redibuja el panel (se perdería el foco del campo mientras se escribe).
+  function setBpm(bpm, from) {
+    settings.bpm = bpm;
+    if (from !== 'range') $('#bpmRange').value = bpm;
+    if (from !== 'input') $('#bpmInput').value = bpm;
     onChange();
+  }
+  const inRange = (n) => Number.isFinite(n) && n >= BPM_RANGE[0] && n <= BPM_RANGE[1];
+  $('#bpmRange').addEventListener('input', (e) => setBpm(Number(e.target.value), 'range'));
+  // Mientras se escribe solo cuentan los números válidos (al escribir «1» camino de «120» no cambia nada).
+  $('#bpmInput').addEventListener('input', (e) => {
+    const n = Number(e.target.value);
+    if (e.target.value !== '' && Number.isInteger(n) && inRange(n)) setBpm(n, 'input');
   });
+  // Al terminar (Intro o salir del campo): se ajusta al rango, o vuelve al tempo actual si está vacío.
+  $('#bpmInput').addEventListener('change', (e) => {
+    const n = Math.round(Number(e.target.value));
+    const bpm = e.target.value === '' || !Number.isFinite(n) ? settings.bpm : Math.min(BPM_RANGE[1], Math.max(BPM_RANGE[0], n));
+    setBpm(bpm);
+  });
+  $('#bpmInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+
+  const tapTempo = createTapTempo(BPM_RANGE);
+  const tapBtn = $('#tapTempoBtn');
+  let tapHint = null;
+  function tap(time) {
+    const bpm = tapTempo.tap(time);
+    tapBtn.classList.remove('tapped');
+    void tapBtn.offsetWidth; // reinicia la animación del toque
+    tapBtn.classList.add('tapped');
+    tapBtn.textContent = bpm === null ? t('tapTempoMore') : `👆 ${bpm} ${t('bpmUnit')}`;
+    if (bpm !== null) setBpm(bpm);
+    // Si se deja de tocar, el botón vuelve a su texto.
+    clearTimeout(tapHint);
+    tapHint = setTimeout(() => { tapBtn.textContent = t('tapTempo'); }, 2500);
+  }
+  // pointerdown en vez de click: responde en cuanto se toca, sin el retraso del clic.
+  tapBtn.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    tap(e.timeStamp);
+  });
+  tapBtn.addEventListener('click', (e) => { if (e.detail === 0) tap(e.timeStamp); }); // teclado
+  dialog.addEventListener('close', () => tapTempo.reset());
   $('#rightMapList').addEventListener('change', (e) => {
     const g = e.target.dataset.rightMap;
     if (!g) return;

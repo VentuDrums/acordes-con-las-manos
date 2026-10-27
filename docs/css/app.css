@@ -279,3 +279,10 @@ body.calibrating .chord, body.calibrating .sound-info { display: none; }
 
 /* Mientras se ve el panel de inicio, el acorde se ve solo en la tabla (en móvil no cabe todo). */
 .overlay:not([hidden]) ~ .chord, .overlay:not([hidden]) ~ .sound-info { display: none; }
+
+/* Tempo: número escrito y botón para marcarlo con toques. */
+.bpm-number input { width: 4.5em; font: inherit; font-variant-numeric: tabular-nums; padding: 6px 8px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--text); }
+.tap-tempo { min-width: 9.5em; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.tap-tempo.tapped { animation: tap-flash 0.18s ease-out; }
+@keyframes tap-flash { from { background: var(--accent); color: #000; } }

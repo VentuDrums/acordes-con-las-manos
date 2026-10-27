@@ -80,7 +80,7 @@ El modo se elige en la configuración. En cada modo, el valor que no controla la
 
 ## 6. Tiempo y cambio de acorde
 
-- **Tempo:** se ajusta a mano en la app. En los compases de subdivisión ternaria (3/8, 6/8, 9/8, 12/8) el pulso es la negra con puntillo.
+- **Tempo:** se ajusta a mano en la app de tres formas: con el deslizador, escribiendo el número con el teclado (de 40 a 200 ppm) o con el botón «Marcar tempo», que calcula los ppm a partir de los últimos toques (promedio de hasta 8; si pasan más de 2 s entre toques, empieza de nuevo). En los compases de subdivisión ternaria (3/8, 6/8, 9/8, 12/8) el pulso es la negra con puntillo.
 - **Compás:** se elige en un selector: 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 y 12/8. Cada compás guarda su propia tabla gesto → patrón.
 - **Momento del cambio de acorde:** al instante, en el siguiente pulso o en el siguiente compás.
   - **Al instante:** al cambiar de acorde, lo que aún suena del acorde anterior (por ejemplo, un bajo largo) se corta y el acorde nuevo entra **en ese momento** con el resto de su duración, aunque sea un poco tarde (decisión del usuario tras probar la fase 3: antes sonaba el bajo del acorde anterior si el cambio no llegaba con antelación).

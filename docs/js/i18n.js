@@ -155,6 +155,9 @@ const STRINGS = {
     bassFollows: 'El bajo sigue la inversión',
     tempo: 'Tempo',
     bpmUnit: 'ppm',
+    tapTempo: '👆 Marcar tempo',
+    tapTempoHelp: 'Toca «Marcar tempo» al ritmo del pulso (al menos dos toques). Cuantos más toques, más preciso. También puedes escribir el número.',
+    tapTempoMore: 'Sigue tocando…',
     gestureAction: '{gesture}: qué hace',
 
     inversion_root: 'Estado fundamental',
@@ -243,6 +246,9 @@ export function t(key, vars = {}) {
 // Rellena los elementos con data-i18n (texto) y data-i18n-title (tooltip).
 export function translatePage(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = t(el.dataset.i18n); });
-  root.querySelectorAll('[data-i18n-title]').forEach((el) => { el.title = t(el.dataset.i18nTitle); });
+  root.querySelectorAll('[data-i18n-title]').forEach((el) => {
+    el.title = t(el.dataset.i18nTitle);
+    if (el.tagName === 'INPUT') el.setAttribute('aria-label', el.title);
+  });
   document.documentElement.lang = lang;
 }

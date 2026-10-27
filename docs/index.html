@@ -117,8 +117,11 @@
       <h3 data-i18n="timeSection"></h3>
       <div class="fields">
         <label><span data-i18n="meter"></span> <select id="meterSelect"></select></label>
-        <label><span data-i18n="tempo"></span> <input type="range" id="bpmRange"> <output id="bpmValue"></output></label>
+        <label><span data-i18n="tempo"></span> <input type="range" id="bpmRange"></label>
+        <label class="bpm-number"><input type="number" id="bpmInput" inputmode="numeric" data-i18n-title="tempo"> <span data-i18n="bpmUnit"></span></label>
+        <button id="tapTempoBtn" class="tap-tempo" data-i18n="tapTempo"></button>
       </div>
+      <p id="tapTempoHelp" class="hint" data-i18n="tapTempoHelp"></p>
       <div class="segmented" role="group">
         <button data-time-mode="free" data-i18n="freeMode"></button>
         <button data-time-mode="metronome" data-i18n="metronomeMode"></button>

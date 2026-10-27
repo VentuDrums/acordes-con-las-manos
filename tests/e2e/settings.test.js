@@ -175,3 +175,50 @@ test('configuración y calibración caben en tablet y móvil', async () => {
     }
   }
 });
+
+test('tempo: se escribe con el teclado o se marca con toques', async () => {
+  const app = await openApp();
+  try {
+    const { page } = app;
+    await openSettings(page);
+    const bpm = () => page.evaluate(() => ({ s: window.acordes.settings.bpm, e: window.acordes.engine.bpm }));
+
+    // Escribir: «1» camino de «112» no cambia el tempo; «112» sí, y el deslizador lo sigue.
+    await page.fill('#bpmInput', '');
+    await page.type('#bpmInput', '1');
+    assert.deepEqual(await bpm(), { s: 90, e: 90 });
+    await page.type('#bpmInput', '12');
+    assert.deepEqual(await bpm(), { s: 112, e: 112 });
+    assert.equal(await page.inputValue('#bpmRange'), '112');
+    // Fuera de rango: al pulsar Intro se ajusta al máximo; vacío vuelve al tempo actual.
+    await page.fill('#bpmInput', '350');
+    await page.press('#bpmInput', 'Enter');
+    assert.equal(await page.inputValue('#bpmInput'), '200');
+    assert.equal((await bpm()).s, 200);
+    await page.fill('#bpmInput', '');
+    await page.press('#bpmInput', 'Enter');
+    assert.equal(await page.inputValue('#bpmInput'), '200');
+    // El deslizador actualiza el número.
+    await page.fill('#bpmRange', '75');
+    assert.equal(await page.inputValue('#bpmInput'), '75');
+
+    // Marcar el tempo: 6 toques cada 500 ms → 120 ppm.
+    const box = await page.locator('#tapTempoBtn').boundingBox();
+    for (let i = 0; i < 6; i++) {
+      if (i) await page.waitForTimeout(500);
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      if (i === 0) assert.equal((await page.textContent('#tapTempoBtn')).trim(), 'Sigue tocando…');
+    }
+    const tapped = (await bpm()).s;
+    assert.ok(tapped >= 114 && tapped <= 122, `tempo marcado: ${tapped}`);
+    assert.equal(await page.inputValue('#bpmInput'), String(tapped));
+    assert.match(await page.textContent('#tapTempoBtn'), new RegExp(`${tapped} ppm`));
+    await page.screenshot({ path: path.join(SHOTS, 'tempo.png') });
+
+    await page.reload();
+    assert.equal(await page.evaluate(() => window.acordes.settings.bpm), tapped, 'se guarda');
+    assert.deepEqual(app.errors, []);
+  } finally {
+    await app.close();
+  }
+});
